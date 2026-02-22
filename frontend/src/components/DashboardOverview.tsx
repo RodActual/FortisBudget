@@ -6,7 +6,6 @@ import {
   TrendingDown, 
   TrendingUp, 
   Wallet, 
-  Target, 
   ShieldCheck, 
   Infinity, 
   AlertCircle,
@@ -24,20 +23,12 @@ interface DashboardOverviewProps {
   onOpenAddTransaction: () => void;
 }
 
-/**
- * DETERMINISTIC UI LOGIC: VAULT PROGRESS COLORS
- * Ensures a consistent red-amber-green flow for savings achievement.
- */
 function getVaultProgressColor(pct: number): string {
   if (pct >= 70) return "var(--field-green)";
   if (pct >= 30) return "var(--safety-amber)";
   return "var(--castle-red)";
 }
 
-/**
- * DETERMINISTIC UI LOGIC: BUDGET TIERS
- * Calculates the "Combat" or "Secure" state of a spending category.
- */
 function getBudgetTier(spent: number, budgeted: number): {
   className: string;
   barColor: string;
@@ -95,48 +86,43 @@ export function DashboardOverview({
 }: DashboardOverviewProps) {
   const { userName, shieldAllocationPct } = useUserSettings();
 
-  // ─── 1. CORE MATHEMATICAL ENGINE ─────────────────────────────────────────
-  /**
-   * We perform all calculations locally within this useMemo to guarantee that 
-   * the Dashboard is always in sync with the actual 'transactions' array, 
-   * bypassing any stale state from parent hooks.
-   */
+  // ─── CORE MATHEMATICAL ENGINE ────────────────────────────────────────────
   const stats = useMemo(() => {
-    // Safety check: Filter out archived data before summing
     const active = transactions.filter(t => !t.archived);
-    
-    // Total Gross Income
+
     const totalIncome = active
       .filter(t => t.type === "income")
       .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-      
-    // Total Gross Expenses
+
     const totalExpenses = active
       .filter(t => t.type === "expense")
       .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-      
-    // Real-time calculation of the Shield Target (based on onboarding percentage)
+
+    const netBalance = totalIncome - totalExpenses;
+
+    // Shield Target is a reference/goal metric only — not used for spendable calc
     const shieldTarget = totalIncome * (shieldAllocationPct / 100);
 
-    // REAL NET BALANCE: Absolute cash difference
-    const netBalance = totalIncome - totalExpenses;
-    
-    // TRUE AVAILABLE BUDGET: (Gross Income) - (Shield Reserve) - (Actual Spending)
-    const availableToSpend = totalIncome - shieldTarget - totalExpenses;
+    // BUG FIX #1: Available Budget uses ACTUAL vault balances (real allocations
+    // the user has made), NOT the static shield percentage from onboarding.
+    // Old (broken): availableToSpend = totalIncome - shieldTarget - totalExpenses
+    // New (correct): availableToSpend = netBalance - totalVaultBalance
+    const totalVaultBalance = savingsBuckets.reduce(
+      (sum, v) => sum + Number(v.currentBalance || 0), 0
+    );
+    const availableToSpend = netBalance - totalVaultBalance;
 
-    return { 
-      totalIncome, 
-      totalExpenses, 
-      netBalance, 
+    return {
+      totalIncome,
+      totalExpenses,
+      netBalance,
       shieldTarget,
-      availableToSpend 
+      availableToSpend,
+      totalVaultBalance,
     };
-  }, [transactions, shieldAllocationPct]);
+  }, [transactions, savingsBuckets, shieldAllocationPct]);
 
-  // ─── 2. RECENT ACTIVITY SORTING ──────────────────────────────────────────
-  /**
-   * We clone the array and sort by date descending so the newest log is top.
-   */
+  // ─── RECENT ACTIVITY ────────────────────────────────────────────────────
   const recentTransactions = useMemo(() => (
     [...transactions]
       .filter(t => !t.archived)
@@ -176,8 +162,8 @@ export function DashboardOverview({
 
       {/* ─── ROW 2: STRATEGIC SUMMARY CARDS ─── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        
-        {/* Card 1: Net Balance (Total Cash in System) */}
+
+        {/* Card 1: Net Balance */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -195,7 +181,7 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Card 2: Shield Target (Reserve Goal) */}
+        {/* Card 2: Shield Target (reference metric only) */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--engine-navy)' }}>
@@ -213,7 +199,7 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Card 3: Total Expenses (Actual Outflow) */}
+        {/* Card 3: Total Expenses */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
@@ -231,7 +217,7 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Card 4: Available Budget (TRUE Spendable Amount) */}
+        {/* Card 4: Available Budget — vault-corrected */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--field-green)' }}>
@@ -245,7 +231,9 @@ export function DashboardOverview({
             <div className="text-2xl font-bold font-mono" style={{ color: stats.availableToSpend >= 0 ? 'var(--field-green)' : 'var(--castle-red)' }}>
               ${stats.availableToSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <p className="text-[10px] mt-1 text-muted-foreground uppercase font-bold">Safe to Spend</p>
+            <p className="text-[10px] mt-1 text-muted-foreground uppercase font-bold">
+              Net − ${stats.totalVaultBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} Vaulted
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -260,19 +248,17 @@ export function DashboardOverview({
         <CardContent className="pt-6">
           {savingsBuckets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center border-2 border-dashed rounded-lg" style={{ borderColor: 'var(--border-subtle)' }}>
-               <AlertCircle className="w-8 h-8 mb-2 opacity-20" />
-               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">No Manual Vaults Found</p>
-               <p className="text-[10px] mt-1 text-muted-foreground">Initialize targets in the Settings tab to track specific savings.</p>
+              <AlertCircle className="w-8 h-8 mb-2 opacity-20" />
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">No Manual Vaults Found</p>
+              <p className="text-[10px] mt-1 text-muted-foreground">Initialize targets in the Settings tab to track specific savings.</p>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {savingsBuckets.map(vault => {
                 const hasCeiling = vault.ceilingAmount !== null && Number(vault.ceilingAmount) > 0;
-                const isCapped = hasCeiling && Number(vault.currentBalance) >= Number(vault.ceilingAmount);
-                
-                // Calculate progress strictly against ceiling for Capped Vaults
-                const pct = hasCeiling 
-                  ? Math.min((Number(vault.currentBalance) / Number(vault.ceilingAmount)) * 100, 100) 
+                const isCapped   = hasCeiling && Number(vault.currentBalance) >= Number(vault.ceilingAmount);
+                const pct        = hasCeiling
+                  ? Math.min((Number(vault.currentBalance) / Number(vault.ceilingAmount)) * 100, 100)
                   : 0;
 
                 return (
@@ -287,7 +273,7 @@ export function DashboardOverview({
                         </span>
                       ) : null}
                     </div>
-                    
+
                     <div className="flex items-baseline gap-1">
                       <span className="text-xl font-bold font-mono" style={{ color: 'var(--engine-navy)' }}>
                         ${Number(vault.currentBalance).toLocaleString()}
@@ -298,27 +284,24 @@ export function DashboardOverview({
                     </div>
 
                     <div className="space-y-1.5 mt-1">
-                      {/* Capped Vaults get the visual progress engine */}
                       {hasCeiling && (
                         <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border-subtle)' }}>
-                          <div 
-                            className="h-full transition-all duration-1000 ease-in-out" 
-                            style={{ 
-                              width: `${pct}%`, 
-                              backgroundColor: isCapped ? 'var(--field-green)' : getVaultProgressColor(pct) 
-                            }} 
+                          <div
+                            className="h-full transition-all duration-1000 ease-in-out"
+                            style={{
+                              width: `${pct}%`,
+                              backgroundColor: isCapped ? 'var(--field-green)' : getVaultProgressColor(pct),
+                            }}
                           />
                         </div>
                       )}
-                      
-                      {/* Secondary metrics */}
                       <div className="flex justify-between text-[10px] font-bold font-mono mt-1" style={{ color: 'var(--fortress-steel)' }}>
                         <span>Target: ${Number(vault.monthlyTarget).toLocaleString()}/mo</span>
                         {hasCeiling && <span>{Math.round(pct)}%</span>}
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -327,8 +310,8 @@ export function DashboardOverview({
 
       {/* ─── ROW 4: BUDGET STATUS & RECENT ACTIVITY ─── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        
-        {/* Budget Detailed Progress */}
+
+        {/* Budget Status */}
         <Card className="col-span-4 border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
@@ -341,8 +324,8 @@ export function DashboardOverview({
             ) : (
               <div className="space-y-4">
                 {budgets.map((budget) => {
-                  const pct  = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
-                  const tier = getBudgetTier(budget.spent, budget.budgeted);
+                  const pct      = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
+                  const tier     = getBudgetTier(budget.spent, budget.budgeted);
                   const isCombat = budget.spent > budget.budgeted;
 
                   return (
@@ -351,7 +334,7 @@ export function DashboardOverview({
                       className={`rounded-md p-3.5 border transition-all ${tier.className}`}
                       style={{
                         backgroundColor: isCombat ? 'var(--engine-navy)' : 'var(--surface)',
-                        borderColor: isCombat ? 'transparent' : 'var(--border-subtle)',
+                        borderColor:     isCombat ? 'transparent' : 'var(--border-subtle)',
                       }}
                     >
                       <div className="flex items-center justify-between mb-2.5">
@@ -365,10 +348,11 @@ export function DashboardOverview({
                           <span className="text-xs font-bold font-mono" style={{ color: isCombat ? '#CBD5E1' : 'var(--fortress-steel)' }}>
                             ${Number(budget.spent).toFixed(0)} / ${budget.budgeted}
                           </span>
-                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                            style={{ 
-                              color: tier.labelColor, 
-                              backgroundColor: isCombat ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)' 
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                            style={{
+                              color: tier.labelColor,
+                              backgroundColor: isCombat ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)',
                             }}
                           >
                             {tier.label}
@@ -394,7 +378,7 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Detailed Recent Transactions */}
+        {/* Recent Activity */}
         <Card className="col-span-3 border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
@@ -407,18 +391,15 @@ export function DashboardOverview({
             ) : (
               <div className="space-y-4">
                 {recentTransactions.map((t) => (
-                  <div 
-                    key={t.id} 
-                    className="flex items-center justify-between border-b border-dashed pb-4 last:border-0 last:pb-0" 
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between border-b border-dashed pb-4 last:border-0 last:pb-0"
                     style={{ borderColor: 'var(--border-subtle)' }}
                   >
                     <div className="flex items-center gap-3.5">
-                      <div 
-                        className="p-2 rounded-md" 
-                        style={{ backgroundColor: t.type === "income" ? "#DCFCE7" : "#FEE2E2" }}
-                      >
-                        {t.type === "income" 
-                          ? <TrendingUp className="h-4 w-4" style={{ color: 'var(--field-green)' }} /> 
+                      <div className="p-2 rounded-md" style={{ backgroundColor: t.type === "income" ? "#DCFCE7" : "#FEE2E2" }}>
+                        {t.type === "income"
+                          ? <TrendingUp  className="h-4 w-4" style={{ color: 'var(--field-green)' }} />
                           : <TrendingDown className="h-4 w-4" style={{ color: 'var(--castle-red)' }} />
                         }
                       </div>
@@ -440,7 +421,6 @@ export function DashboardOverview({
             )}
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

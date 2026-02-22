@@ -55,7 +55,6 @@ export function AddTransactionDialog({
   const [category, setCategory]       = useState("");
   const [type, setType]               = useState<"income" | "expense">("expense");
   const [date, setDate]               = useState(formatDateForInput(new Date()));
-  
   const [allocations, setAllocations] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -79,36 +78,46 @@ export function AddTransactionDialog({
     setAllocations(prev => ({ ...prev, [vaultId]: val }));
   };
 
-  // ─── THE AUTO-FILL ENGINE ────────────────────────────────────────────────
+  // ─── AUTO-FILL ENGINE (BUG FIX #2) ──────────────────────────────────────
+  // OLD BUG: When a vault's monthlyTarget > remainingDeposit, the else-if
+  // branch dumped ALL remaining funds into that one vault and set
+  // remainingDeposit = 0, starving every subsequent vault even if the user
+  // only needed a small top-up from each.
+  //
+  // FIX: We iterate over every vault regardless. Each vault only claims what
+  // it actually needs (up to its ceiling), and the remaining pool shrinks
+  // correctly across ALL vaults in sequence.
   const handleAutoFill = () => {
-    let remainingDeposit = amount;
+    let remaining = amount;
     const newAllocs: Record<string, number> = {};
 
-    savingsBuckets.forEach(vault => {
-      // Find out how much room is left before hitting the ceiling (if one exists)
-      const spaceLeft = vault.ceilingAmount ? vault.ceilingAmount - vault.currentBalance : Infinity;
-      
-      // We want to fund the monthly target, but not exceed the ceiling
+    for (const vault of savingsBuckets) {
+      if (remaining <= 0) break;
+
+      // How much room before hitting the ceiling (Infinity if uncapped)
+      const spaceLeft = vault.ceilingAmount
+        ? Math.max(0, Number(vault.ceilingAmount) - Number(vault.currentBalance))
+        : Infinity;
+
+      // We want to fund up to the monthly target, but never exceed the ceiling
       const idealAmount = Math.min(vault.monthlyTarget, spaceLeft);
 
-      if (idealAmount > 0 && remainingDeposit >= idealAmount) {
-        newAllocs[vault.id] = idealAmount;
-        remainingDeposit -= idealAmount;
-      } else if (idealAmount > 0 && remainingDeposit > 0) {
-        newAllocs[vault.id] = remainingDeposit;
-        remainingDeposit = 0;
-      }
-    });
+      if (idealAmount <= 0) continue; // vault already maxed, skip
+
+      // Claim as much of the ideal amount as the remaining deposit allows
+      const claimed = Math.min(idealAmount, remaining);
+      newAllocs[vault.id] = claimed;
+      remaining -= claimed;
+    }
 
     setAllocations(newAllocs);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Auto-assign category if it is an income transaction
+
+    // Income transactions don't need a manual category — assign automatically
     const finalCategory = type === "income" ? "Income" : category;
-    
     if (!description || amount <= 0 || !finalCategory) return;
 
     const transactionData = {
@@ -123,15 +132,17 @@ export function AddTransactionDialog({
       onEditTransaction(transactionData);
     } else {
       onAddTransaction(transactionData);
-      
+
+      // Commit vault allocations after logging the transaction
       if (type === "income" && onUpdateVault) {
         for (const vaultId of Object.keys(allocations)) {
           const addedAmount = allocations[vaultId];
           if (addedAmount > 0) {
             const targetVault = savingsBuckets.find(v => v.id === vaultId);
             if (targetVault) {
-              const newBalance = targetVault.currentBalance + addedAmount;
-              await onUpdateVault(vaultId, { currentBalance: newBalance });
+              await onUpdateVault(vaultId, {
+                currentBalance: Number(targetVault.currentBalance) + addedAmount,
+              });
             }
           }
         }
@@ -149,23 +160,23 @@ export function AddTransactionDialog({
     "Other",
   ]));
 
-  const totalAllocated = Object.values(allocations).reduce((sum, val) => sum + val, 0);
+  const totalAllocated  = Object.values(allocations).reduce((sum, v) => sum + v, 0);
   const isOverAllocated = totalAllocated > amount;
-  const toSpendable = Math.max(0, amount - totalAllocated);
+  const toSpendable     = Math.max(0, amount - totalAllocated);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-[425px] flex flex-col p-0 gap-0"
-        style={{ 
-          backgroundColor: "var(--surface)", 
-          borderColor: "var(--border-subtle)",
-          maxHeight: "85vh",
-          overflow: "hidden" 
+        style={{
+          backgroundColor: "var(--surface)",
+          borderColor:     "var(--border-subtle)",
+          maxHeight:       "85vh",
+          overflow:        "hidden",
         }}
       >
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-          
+
           <div className="px-6 pt-6 pb-2 shrink-0">
             <DialogHeader>
               <DialogTitle
@@ -184,7 +195,8 @@ export function AddTransactionDialog({
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="grid gap-4 pr-1">
-              
+
+              {/* Type */}
               <div className="grid gap-1.5">
                 <Label htmlFor="type" style={labelStyle}>Type</Label>
                 <Select value={type} onValueChange={(v: "income" | "expense") => setType(v)}>
@@ -192,7 +204,7 @@ export function AddTransactionDialog({
                     id="type"
                     style={{
                       ...inputStyle,
-                      color: type === "income" ? "var(--field-green)" : "var(--castle-red)",
+                      color:      type === "income" ? "var(--field-green)" : "var(--castle-red)",
                       fontWeight: 600,
                     }}
                   >
@@ -209,6 +221,7 @@ export function AddTransactionDialog({
                 </Select>
               </div>
 
+              {/* Date + Amount row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-1.5">
                   <Label htmlFor="date" style={labelStyle}>Date</Label>
@@ -221,7 +234,6 @@ export function AddTransactionDialog({
                     style={{ ...inputStyle, fontFamily: "var(--font-mono)" }}
                   />
                 </div>
-
                 <div className="grid gap-1.5">
                   <Label htmlFor="amount" style={labelStyle}>Amount</Label>
                   <MoneyInput
@@ -234,6 +246,7 @@ export function AddTransactionDialog({
                 </div>
               </div>
 
+              {/* Description */}
               <div className="grid gap-1.5">
                 <Label htmlFor="description" style={labelStyle}>Description</Label>
                 <Input
@@ -246,7 +259,7 @@ export function AddTransactionDialog({
                 />
               </div>
 
-              {/* ONLY show Category if it is an expense */}
+              {/* Category — expenses only */}
               {type === "expense" && (
                 <div className="grid gap-1.5">
                   <Label htmlFor="category" style={labelStyle}>Category</Label>
@@ -269,9 +282,9 @@ export function AddTransactionDialog({
                 </div>
               )}
 
-              {/* ── DYNAMIC VAULT ALLOCATION UI ── */}
+              {/* Vault allocation panel — income only */}
               {type === "income" && !editingTransaction && savingsBuckets.length > 0 && (
-                <div 
+                <div
                   className="mt-1 p-3 rounded-lg border space-y-3"
                   style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
                 >
@@ -282,10 +295,10 @@ export function AddTransactionDialog({
                           <ShieldCheck className="w-3.5 h-3.5" /> Shield
                         </h4>
                         {amount > 0 && (
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={handleAutoFill}
                             className="h-5 px-2 text-[9px] font-bold uppercase tracking-wider"
                             style={{ backgroundColor: "rgba(27, 38, 59, 0.1)", color: "var(--engine-navy)" }}
@@ -294,7 +307,10 @@ export function AddTransactionDialog({
                           </Button>
                         )}
                       </div>
-                      <span className="text-[11px] font-mono font-bold" style={{ color: isOverAllocated ? "var(--castle-red)" : "var(--fortress-steel)"}}>
+                      <span
+                        className="text-[11px] font-mono font-bold"
+                        style={{ color: isOverAllocated ? "var(--castle-red)" : "var(--fortress-steel)" }}
+                      >
                         ${totalAllocated.toFixed(2)} / ${amount.toFixed(2)}
                       </span>
                     </div>
@@ -304,14 +320,13 @@ export function AddTransactionDialog({
                         * Allocating $0 bypasses the shield. 100% of this deposit will flow into your spendable budget.
                       </p>
                     )}
-
                     {isOverAllocated && (
                       <p className="text-[10px] font-bold leading-tight" style={{ color: "var(--castle-red)" }}>
                         Warning: Allocated more than deposit amount.
                       </p>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     {savingsBuckets.map(vault => (
                       <div key={vault.id} className="grid grid-cols-3 items-center gap-2">
@@ -320,13 +335,13 @@ export function AddTransactionDialog({
                             {vault.name}
                           </Label>
                           <span className="text-[10px] font-mono truncate" style={{ color: "var(--text-muted)" }}>
-                            Bal: ${vault.currentBalance.toLocaleString()} / ${vault.monthlyTarget}
+                            Bal: ${Number(vault.currentBalance).toLocaleString()} / ${vault.monthlyTarget}
                           </span>
                         </div>
                         <div className="col-span-1">
                           <MoneyInput
                             value={allocations[vault.id] || 0}
-                            onChange={(val) => handleAllocationChange(vault.id, val)}
+                            onChange={val => handleAllocationChange(vault.id, val)}
                             className="h-8 text-xs text-right"
                           />
                         </div>
@@ -334,9 +349,11 @@ export function AddTransactionDialog({
                     ))}
                   </div>
 
-                  {/* Spendable Readout */}
                   {amount > 0 && (
-                    <div className="flex justify-between items-center pt-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+                    <div
+                      className="flex justify-between items-center pt-2 border-t"
+                      style={{ borderColor: "var(--border-subtle)" }}
+                    >
                       <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--field-green)" }}>
                         To Spendable
                       </span>
@@ -345,14 +362,16 @@ export function AddTransactionDialog({
                       </span>
                     </div>
                   )}
-
                 </div>
               )}
 
             </div>
           </div>
 
-          <div className="px-6 py-4 border-t shrink-0" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface)" }}>
+          <div
+            className="px-6 py-4 border-t shrink-0"
+            style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface)" }}
+          >
             <DialogFooter className="gap-2">
               <Button
                 type="button"
