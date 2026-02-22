@@ -15,3 +15,4 @@ export { WelcomeSetup } from "./WelcomeSetup";
 export { EmailVerification } from "./EmailVerification";
 export { ErrorBoundary } from './ErrorBoundary';
 export { GlobalErrorBoundary } from './GlobalErrorBoundary';
+export { CSVMappingDialog } from "./CSVMappingDialog";

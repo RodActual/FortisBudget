@@ -40,9 +40,9 @@ export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: Chart
     budgets
       .map((b) => ({
         name: b.category,
-        value: b.spent,
+        value: Number(b.spent || 0),
         color: resolveColor(b.color),
-        budget: b.budgeted,
+        budget: Number(b.budgeted || 0),
       }))
       .filter((item) => item.budget > 0 || item.value > 0),
     [budgets]
@@ -52,23 +52,44 @@ export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: Chart
 
   // ── 2. Trend data with time-range filter ─────────────────────────────────
   const filteredTrendData = useMemo(() => {
+    // Group transactions by Year-Month
     const grouped: Record<string, { date: string; sortKey: number; income: number; expense: number }> = {};
 
     transactions.forEach((t) => {
+      if (t.archived) return; 
+
       const d = new Date(t.date);
       if (isNaN(d.getTime())) return;
+      
       const year = d.getFullYear();
-      const month = d.getMonth();
-      const key = `${year}-${month}`;
+      const month = d.getMonth(); 
+      
+      // Ensure key sorts properly chronologically
+      const paddedMonth = month.toString().padStart(2, "0");
+      const key = `${year}-${paddedMonth}`;
+      
       const displayDate = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
-      if (!grouped[key]) grouped[key] = { date: displayDate, sortKey: year * 100 + month, income: 0, expense: 0 };
-      if (t.type === "income") grouped[key].income += t.amount;
-      else grouped[key].expense += t.amount;
+      if (!grouped[key]) {
+        grouped[key] = { 
+          date: displayDate, 
+          sortKey: year * 100 + month, 
+          income: 0, 
+          expense: 0 
+        };
+      }
+      
+      if (t.type === "income") {
+        grouped[key].income += Number(t.amount || 0);
+      } else {
+        grouped[key].expense += Number(t.amount || 0);
+      }
     });
 
     const sorted = Object.values(grouped).sort((a, b) => a.sortKey - b.sortKey);
+    
     if (timeRange === "all") return sorted;
+    
     const rangeMap: Record<TimeRange, number> = { "3m": 3, "6m": 6, "1y": 12, all: 999 };
     return sorted.slice(-rangeMap[timeRange]);
   }, [transactions, timeRange]);

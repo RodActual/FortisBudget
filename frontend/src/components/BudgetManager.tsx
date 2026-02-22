@@ -41,11 +41,19 @@ const COMMON_CATEGORIES = [
   "Entertainment", "Health", "Shopping", "Other",
 ];
 
-// ── Four-tier progress bar color ─────────────────────────────────────────────
-function getBarColor(pct: number): string {
-  if (pct >= 100) return "var(--castle-red)";   // Combat / Breach
-  if (pct >= 85)  return "var(--safety-amber)"; // Caution
-  return "var(--field-green)";                  // Secure
+/**
+ * ── VISUAL TIERING FOR BUDGET HEALTH ──────────────────────────────────────────
+ * Exact match to the Dashboard visual logic (Green, Amber, Red, Black/Steel).
+ */
+function getBudgetTier(spent: number, budgeted: number) {
+  if (budgeted === 0) return { barColor: "var(--fortress-steel)", labelColor: "var(--fortress-steel)", label: "—" };
+  
+  const pct = (spent / budgeted) * 100;
+  
+  if (spent > budgeted) return { barColor: "var(--castle-red)", labelColor: "var(--castle-red)", label: "OVER BUDGET" };
+  if (pct >= 100) return { barColor: "#991B1B", labelColor: "#991B1B", label: "BREACH" };
+  if (pct >= 85) return { barColor: "var(--safety-amber)", labelColor: "var(--safety-amber)", label: "CAUTION" };
+  return { barColor: "var(--field-green)", labelColor: "var(--field-green)", label: "SECURE" };
 }
 
 export function BudgetManager({ budgets, onUpdateBudgets, transactions }: BudgetManagerProps) {
@@ -117,7 +125,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Delete this budget category?")) {
+    if (window.confirm("Delete this budget category?")) {
       onUpdateBudgets(budgets.filter(b => b.id !== id));
     }
   };
@@ -189,77 +197,83 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
               </div>
 
               {/* ── Budget rows ───────────────────────────────────────────── */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {budgets.map((budget) => {
-                  const pct       = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
-                  const isOver    = budget.spent > budget.budgeted;
-                  const barColor  = getBarColor(pct);
+                  const pct  = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
+                  const tier = getBudgetTier(budget.spent, budget.budgeted);
+                  const isOver = budget.spent > budget.budgeted;
 
                   return (
                     <div
                       key={budget.id}
-                      className="rounded-md p-3 border transition-colors"
+                      className="rounded-md p-3.5 border transition-all"
                       style={{
-                        backgroundColor: isOver ? "var(--engine-navy)" : "var(--surface)",
-                        borderColor:     isOver ? "transparent" : "var(--border-subtle)",
+                        backgroundColor: "var(--surface)",
+                        borderColor: "var(--border-subtle)",
                       }}
                     >
                       {/* Row header */}
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: isOver ? "#FCA5A5" : budget.color }} />
-                          <span className="text-sm font-semibold" style={{ color: isOver ? "#FFFFFF" : "var(--text-primary)" }}>
+                      <div className="flex items-center justify-between mb-2.5">
+                        
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: budget.color }} />
+                          <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
                             {budget.category}
                           </span>
                         </div>
-                        <div className="flex items-center gap-0.5">
-                          <button
-                            onClick={() => openEditDialog(budget)}
-                            className="p-1.5 rounded transition-colors"
-                            style={{ color: isOver ? "#CBD5E1" : "var(--fortress-steel)" }}
+                        
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold font-mono" style={{ color: "var(--fortress-steel)" }}>
+                            ${Number(budget.spent).toFixed(0)} / ${budget.budgeted}
+                          </span>
+                          
+                          <span 
+                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                            style={{ color: tier.labelColor, backgroundColor: "var(--surface-raised)" }}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(budget.id!)}
-                            className="p-1.5 rounded transition-colors"
-                            style={{ color: isOver ? "#FCA5A5" : "var(--castle-red)" }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                            {tier.label}
+                          </span>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-0.5 ml-1">
+                            <button
+                              onClick={() => openEditDialog(budget)}
+                              className="p-1 rounded transition-colors hover:bg-slate-100"
+                              style={{ color: "var(--fortress-steel)" }}
+                              title="Edit Budget"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(budget.id!)}
+                              className="p-1 rounded transition-colors hover:bg-red-50"
+                              style={{ color: "var(--castle-red)" }}
+                              title="Delete Budget"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Spend numbers */}
-                      <div className="flex justify-between text-xs font-mono mb-1.5">
-                        <span style={{ color: isOver ? "#CBD5E1" : "var(--fortress-steel)" }}>
-                          ${budget.spent.toFixed(2)} / ${budget.budgeted.toFixed(2)}
-                        </span>
-                        <span
-                          className="font-bold"
-                          style={{ color: isOver ? "#FCA5A5" : barColor }}
-                        >
-                          {pct.toFixed(0)}%
-                        </span>
                       </div>
 
                       {/* Progress bar */}
                       <div
                         className="w-full h-1.5 rounded-full overflow-hidden"
-                        style={{ backgroundColor: isOver ? "rgba(255,255,255,0.12)" : "var(--border-subtle)" }}
+                        style={{ backgroundColor: "var(--border-subtle)" }}
                       >
                         <div
-                          className="h-full rounded-full transition-all duration-500"
+                          className="h-full rounded-full transition-all duration-700"
                           style={{
                             width: `${Math.min(pct, 100)}%`,
-                            backgroundColor: barColor,
+                            backgroundColor: tier.barColor,
                           }}
                         />
                       </div>
 
                       {/* Over-budget callout */}
                       {isOver && (
-                        <p className="text-[11px] font-bold font-mono mt-1.5" style={{ color: "#FCA5A5" }}>
+                        <p className="text-[11px] font-bold font-mono mt-2" style={{ color: "var(--castle-red)" }}>
                           ▲ ${(budget.spent - budget.budgeted).toFixed(2)} over budget
                         </p>
                       )}

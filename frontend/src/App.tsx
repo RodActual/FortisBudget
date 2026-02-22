@@ -91,14 +91,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [authMode, setAuthMode] = useState<"landing" | "login" | "signup" | "privacy" | "terms">("landing");
+  const [authMode, setAuthMode] = useState<'landing' | 'login' | 'signup' | 'privacy' | 'terms'>('landing');
   const [showVerificationBanner, setShowVerificationBanner] = useState(false);
 
   // --- 3. CUSTOM HOOKS ---
+  // THE FIX: Added savingsBuckets and vault functions back into the pipeline
   const { 
     transactions, budgets, currentBudgets, savingsBuckets, loading: dataLoading, 
     addTransaction, updateTransaction, deleteTransaction, updateBudgets,
-    addVault, updateVault, deleteVault
+    addVault, updateVault, deleteVault 
   } = useFinancialData(user);
 
   const { showWarning, continueSession, logout } = useInactivity(user);
@@ -163,11 +164,11 @@ export default function App() {
     setUserName("User");
     setSavingsGoal(0);
     setActiveTab("dashboard");
-    setAuthMode("landing");
+    setAuthMode('landing');
     setIsSetupComplete(false);
   };
 
-  const handleLegalBack = () => setAuthMode("landing");
+  const handleLegalBack = () => setAuthMode('landing');
 
   const handleUpdatePassword = async (current: string, newPass: string) => {
     if (!user) return { success: false, error: "No user" };
@@ -187,11 +188,11 @@ export default function App() {
       const uid = user.uid;
       const tSnaps = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
       const bSnaps = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
-      const sSnaps = await getDocs(query(collection(db, "savingsBuckets"), where("userId", "==", uid)));
+      const sSnaps = await getDocs(query(collection(db, "savingsBuckets"), where("userId", "==", uid))); // Added vault deletion
       const batch = writeBatch(db);
       tSnaps.docs.forEach(d => batch.delete(d.ref));
       bSnaps.docs.forEach(d => batch.delete(d.ref));
-      sSnaps.docs.forEach(d => batch.delete(d.ref));
+      sSnaps.docs.forEach(d => batch.delete(d.ref)); // Added vault deletion
       batch.delete(doc(db, "userSettings", uid));
       await batch.commit();
       await deleteUser(user);
@@ -206,11 +207,11 @@ export default function App() {
   const handleUpdateTransactionForArchive = async (id: string, updates: Partial<Transaction>) => {
     if (!user) return;
     try {
-      const transactionRef = doc(db, "transactions", id);
+      const transactionRef = doc(db, 'transactions', id);
       await updateDoc(transactionRef, updates);
     } catch (error) {
-      console.error("Error updating transaction:", error);
-      alert("Failed to update transaction. Please try again.");
+      console.error('Error updating transaction:', error);
+      alert('Failed to update transaction. Please try again.');
       throw error;
     }
   };
@@ -218,101 +219,102 @@ export default function App() {
   const handleDeleteTransactionPermanently = async (id: string) => {
     if (!user) return;
     try {
-      const transactionRef = doc(db, "transactions", id);
+      const transactionRef = doc(db, 'transactions', id);
       await deleteDoc(transactionRef);
     } catch (error) {
-      console.error("Error deleting transaction:", error);
-      alert("Failed to delete transaction. Please try again.");
+      console.error('Error deleting transaction:', error);
+      alert('Failed to delete transaction. Please try again.');
       throw error;
     }
   };
 
-  // --- 8. RENDERING ---
+  // --- 8. CSV IMPORT HANDLER ---
+  const handleImportTransactions = async (rows: Omit<Transaction, "id">[]) => {
+    await Promise.all(rows.map(row => addTransaction(row)));
+  };
+
+  // --- 9. RENDERING ---
   if (authLoading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--bg)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--castle-red)", borderTopColor: "transparent" }} />
-        <p className="text-sm font-medium" style={{ color: "var(--fortress-steel)" }}>Loading FortisBudget...</p>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--castle-red)', borderTopColor: 'transparent' }} />
+        <p className="text-sm font-medium" style={{ color: 'var(--fortress-steel)' }}>Loading FortisBudget...</p>
       </div>
     </div>
   );
 
-  const isVerifyRoute = window.location.pathname === "/verify";
-
-  if (authMode === "privacy") return <PrivacyPolicy onBack={handleLegalBack} />;
-  if (authMode === "terms") return <TermsOfService onBack={handleLegalBack} />;
+  // Global Legal Overlays
+  if (authMode === 'privacy') return <PrivacyPolicy onBack={handleLegalBack} />;
+  if (authMode === 'terms') return <TermsOfService onBack={handleLegalBack} />;
 
   if (!user) {
-    if (isVerifyRoute) {
+    if (authMode === 'login' || authMode === 'signup') {
       return (
-        <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "var(--bg)" }}>
-          <div className="w-full max-w-md">
-            <EmailVerification onVerified={() => setAuthMode("login")} />
-          </div>
-        </div>
-      );
-    }
-
-    if (authMode === "login" || authMode === "signup") {
-      return (
-        <div className="relative min-h-screen" style={{ backgroundColor: "var(--bg)" }}>
+        <div className="relative min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
           <div className="absolute top-4 left-4 z-10">
             <Button 
               variant="ghost" 
-              onClick={() => setAuthMode("landing")} 
-              style={{ color: "var(--fortress-steel)" }}
+              onClick={() => setAuthMode('landing')} 
+              style={{ color: 'var(--fortress-steel)' }}
               className="hover:bg-slate-100"
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           </div>
-          <LoginForm onLogin={() => {}} initialIsSignUp={authMode === "signup"} />
+          <LoginForm onLogin={() => {}} initialIsSignUp={authMode === 'signup'} />
         </div>
       );
     }
     
     return (
       <LandingPage 
-        onGetStarted={() => setAuthMode("signup")} 
-        onSignIn={() => setAuthMode("login")} 
-        onOpenPrivacy={() => setAuthMode("privacy")} 
-        onOpenTerms={() => setAuthMode("terms")} 
+        onGetStarted={() => setAuthMode('signup')} 
+        onSignIn={() => setAuthMode('login')} 
+        onOpenPrivacy={() => setAuthMode('privacy')} 
+        onOpenTerms={() => setAuthMode('terms')} 
       />
     );
   }
 
   return (
     <GlobalErrorBoundary>
-      <div className="min-h-screen relative" style={{ backgroundColor: "var(--bg)" }}>
+      <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg)' }}>
         <div className="container mx-auto p-4 sm:p-6 space-y-6">
           
+          {/* ================================================================
+              FORTIS HEADER — Engine Navy structural bar
+              ================================================================ */}
           <header 
             className="flex items-center justify-between rounded-lg px-4 py-3 overflow-hidden"
             style={{ 
-              backgroundColor: "var(--engine-navy)",
-              boxShadow: "0 2px 8px rgba(27, 38, 59, 0.4)",
+              backgroundColor: 'var(--engine-navy)',
+              boxShadow: '0 2px 8px rgba(27, 38, 59, 0.4)',
             }}
           >
+            {/* Left: Brand */}
             <div className="flex items-center gap-3">
-              <FortisLogo className="h-8 w-8" iconOnly />
+              <FortisLogo className="h-8 w-8" />
               <div>
                 <h1 className="text-base font-bold tracking-widest uppercase text-white">
                   FortisBudget
                 </h1>
-                <p className="hidden lg:block text-[9px] font-medium uppercase tracking-[0.25em]" style={{ color: "#64748B" }}>
+                <p className="hidden lg:block text-[9px] font-medium uppercase tracking-[0.25em]" style={{ color: '#64748B' }}>
                   Financial Strength Through Intentionality
                 </p>
               </div>
             </div>
 
+            {/* Right: Actions */}
             <div className="flex items-center gap-2">
+              {/* Email display */}
               <span 
                 className="text-xs font-medium hidden sm:inline px-2 py-1 rounded"
-                style={{ color: "#94A3B8", backgroundColor: "rgba(255,255,255,0.06)" }}
+                style={{ color: '#94A3B8', backgroundColor: 'rgba(255,255,255,0.06)' }}
               >
                 {user?.email}
               </span>
 
+              {/* Notification bell */}
               <div className="text-white">
                 <AlertsNotificationBell 
                   budgets={currentBudgets} 
@@ -322,14 +324,15 @@ export default function App() {
                 />
               </div>
 
+              {/* Logout */}
               <Button 
                 onClick={handleLogout} 
                 size="sm"
                 className="text-white border font-semibold tracking-wide"
                 style={{ 
-                  backgroundColor: "var(--castle-red)",
-                  borderColor: "var(--castle-red-dark)",
-                  boxShadow: "0 2px 0 0 var(--castle-red-dark)",
+                  backgroundColor: 'var(--castle-red)',
+                  borderColor: 'var(--castle-red-dark)',
+                  boxShadow: '0 2px 0 0 var(--castle-red-dark)',
                 }}
               >
                 <LogOut className="h-4 w-4" /> 
@@ -338,7 +341,8 @@ export default function App() {
             </div>
           </header>
 
-          {(showVerificationBanner || isVerifyRoute) && (
+          {/* Verification Banner */}
+          {showVerificationBanner && (
             <EmailVerification 
               onVerified={async () => { 
                 setShowVerificationBanner(false); 
@@ -347,6 +351,9 @@ export default function App() {
             />
           )}
 
+          {/* ================================================================
+              MAIN CONTENT GATE
+              ================================================================ */}
           {user?.emailVerified ? (
             !isSetupComplete ? (
               <WelcomeSetup 
@@ -355,27 +362,30 @@ export default function App() {
               />
             ) : (
               <>
+                {/* ============================================================
+                    NAVIGATION TABS
+                    ============================================================ */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList 
                     className="grid w-full grid-cols-5 h-auto sm:h-10 p-1 rounded-lg border"
                     style={{ 
-                      backgroundColor: "var(--surface)",
-                      borderColor: "var(--border-subtle)",
+                      backgroundColor: 'var(--surface)',
+                      borderColor: 'var(--border-subtle)',
                     }}
                   >
                     {[
-                      { value: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-                      { value: "expenses",  icon: Receipt,         label: "Expenses"  },
-                      { value: "insights",  icon: BarChart3,       label: "Insights"  },
-                      { value: "learn",     icon: BookOpen,        label: "Learn"     },
-                      { value: "settings",  icon: Settings,        label: "Settings"  },
+                      { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+                      { value: 'expenses',  icon: Receipt,         label: 'Expenses'  },
+                      { value: 'insights',  icon: BarChart3,       label: 'Insights'  },
+                      { value: 'learn',     icon: BookOpen,        label: 'Learn'     },
+                      { value: 'settings',  icon: Settings,        label: 'Settings'  },
                     ].map(({ value, icon: Icon, label }) => (
                       <TabsTrigger 
                         key={value}
                         value={value} 
                         className="gap-1.5 text-xs font-semibold uppercase tracking-wide rounded-md transition-all"
                         style={{
-                          color: activeTab === value ? "var(--engine-navy)" : "var(--fortress-steel)",
+                          color: activeTab === value ? 'var(--engine-navy)' : 'var(--fortress-steel)',
                         }}
                       >
                         <Icon className="h-4 w-4" />
@@ -389,7 +399,7 @@ export default function App() {
                       <DashboardOverview 
                         budgets={currentBudgets} 
                         transactions={transactions} 
-                        savingsBuckets={savingsBuckets} // <-- PASSED TO DASHBOARD
+                        savingsBuckets={savingsBuckets} // THE FIX: PASSED DATA HERE
                         onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                       />
                     </ErrorBoundary>
@@ -403,7 +413,8 @@ export default function App() {
                         onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                         onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} 
                         onDelete={deleteTransaction} 
-                        onUpdateTransaction={updateTransaction} 
+                        onUpdateTransaction={updateTransaction}
+                        onImportTransactions={handleImportTransactions}
                       />
                     </ErrorBoundary>
                   </TabsContent>
@@ -429,28 +440,41 @@ export default function App() {
                       <SettingsPage 
                         budgets={budgets} 
                         transactions={transactions}
-                        savingsBuckets={savingsBuckets}      
-                        onAddVault={addVault}                
-                        onUpdateVault={updateVault}          
-                        onDeleteVault={deleteVault}          
+                        savingsBuckets={savingsBuckets} // THE FIX: PASSED DATA HERE
+                        onAddVault={addVault}           // THE FIX: PASSED DATA HERE
+                        onUpdateVault={updateVault}     // THE FIX: PASSED DATA HERE
+                        onDeleteVault={deleteVault}     // THE FIX: PASSED DATA HERE
                         onUpdateTransaction={handleUpdateTransactionForArchive}
                         onDeleteTransaction={handleDeleteTransactionPermanently}
                         onNavigate={setAuthMode}
-                        onUpdatePassword={handleUpdatePassword}
+                        onUpdatePassword={handleUpdatePassword} 
                         onDeleteAccount={handleDeleteAccount}
                       />
                     </ErrorBoundary>
                   </TabsContent>
                 </Tabs>
 
+                {/* Internal Legal Footer */}
                 <footer 
                   className="flex justify-center gap-6 mt-8 pb-8 text-[10px] uppercase tracking-widest font-mono"
-                  style={{ color: "var(--text-muted)" }}
+                  style={{ color: 'var(--text-muted)' }}
                 >
-                  <button onClick={() => setAuthMode("privacy")} className="hover:underline transition-colors">
+                  <button 
+                    onClick={() => setAuthMode('privacy')} 
+                    className="hover:underline transition-colors"
+                    style={{ color: 'inherit' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--castle-red)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                  >
                     Privacy Policy
                   </button>
-                  <button onClick={() => setAuthMode("terms")} className="hover:underline transition-colors">
+                  <button 
+                    onClick={() => setAuthMode('terms')} 
+                    className="hover:underline transition-colors"
+                    style={{ color: 'inherit' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--castle-red)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                  >
                     Terms of Service
                   </button>
                   <span>&copy; 2026 FortisBudget</span>
@@ -463,28 +487,30 @@ export default function App() {
                   onEditTransaction={(t) => { if (editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
                   editingTransaction={editingTransaction}
                   budgets={budgets}
-                  savingsBuckets={savingsBuckets} // <-- PASSED TO DIALOG
-                  onUpdateVault={updateVault}    // <-- PASSED TO DIALOG
+                  savingsBuckets={savingsBuckets} // THE FIX: PASSED DATA HERE
+                  onUpdateVault={updateVault}     // THE FIX: PASSED DATA HERE
                 />
               </>
             )
           ) : (
+            /* Email not verified gate */
             <div 
               className="text-center py-20 border-2 border-dashed rounded-lg mt-6"
               style={{ 
-                borderColor: "var(--border)",
-                backgroundColor: "var(--surface)",
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--surface)',
               }}
             >
-              <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+              <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                 Email Verification Required
               </h2>
-              <p className="mt-2 max-w-sm mx-auto text-sm" style={{ color: "var(--fortress-steel)" }}>
+              <p className="mt-2 max-w-sm mx-auto text-sm" style={{ color: 'var(--fortress-steel)' }}>
                 To protect your financial data, please verify your email address using the banner above.
               </p>
             </div>
           )}
 
+          {/* Inactivity Warning Dialog */}
           <AlertDialog open={showWarning} onOpenChange={() => {}}>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -496,7 +522,7 @@ export default function App() {
               <AlertDialogFooter>
                 <AlertDialogAction 
                   onClick={continueSession}
-                  style={{ backgroundColor: "var(--engine-navy)" }}
+                  style={{ backgroundColor: 'var(--engine-navy)' }}
                 >
                   Continue Session
                 </AlertDialogAction>
