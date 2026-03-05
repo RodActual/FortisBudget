@@ -78,36 +78,39 @@ export function AddTransactionDialog({
     setAllocations(prev => ({ ...prev, [vaultId]: val }));
   };
 
-  // ─── AUTO-FILL ENGINE (BUG FIX #2) ──────────────────────────────────────
-  // OLD BUG: When a vault's monthlyTarget > remainingDeposit, the else-if
-  // branch dumped ALL remaining funds into that one vault and set
-  // remainingDeposit = 0, starving every subsequent vault even if the user
-  // only needed a small top-up from each.
-  //
-  // FIX: We iterate over every vault regardless. Each vault only claims what
-  // it actually needs (up to its ceiling), and the remaining pool shrinks
-  // correctly across ALL vaults in sequence.
+  // ─── AUTO-FILL ENGINE ───────────────────────────────────────────────────
   const handleAutoFill = () => {
-    let remaining = amount;
+    // Force amount to a strict number to prevent string math bugs
+    let remaining = Number(amount) || 0;
+    if (remaining <= 0) return;
+
     const newAllocs: Record<string, number> = {};
 
     for (const vault of savingsBuckets) {
       if (remaining <= 0) break;
 
-      // How much room before hitting the ceiling (Infinity if uncapped)
-      const spaceLeft = vault.ceilingAmount
-        ? Math.max(0, Number(vault.ceilingAmount) - Number(vault.currentBalance))
-        : Infinity;
+      // Ensure all Firestore values are parsed strictly as numbers
+      const currentBal = Number(vault.currentBalance) || 0;
+      const target = Number(vault.monthlyTarget) || 0;
+      const rawCeiling = Number(vault.ceilingAmount) || 0;
+      
+      // If ceiling is 0 or null, treat as uncapped
+      const ceiling = rawCeiling > 0 ? rawCeiling : Infinity;
+
+      // How much room before hitting the ceiling
+      const spaceLeft = Math.max(0, ceiling - currentBal);
 
       // We want to fund up to the monthly target, but never exceed the ceiling
-      const idealAmount = Math.min(vault.monthlyTarget, spaceLeft);
+      const idealAmount = Math.min(target, spaceLeft);
 
-      if (idealAmount <= 0) continue; // vault already maxed, skip
+      if (idealAmount <= 0) continue; // vault already maxed or target is 0, skip
 
       // Claim as much of the ideal amount as the remaining deposit allows
       const claimed = Math.min(idealAmount, remaining);
-      newAllocs[vault.id] = claimed;
-      remaining -= claimed;
+      if (claimed > 0) {
+        newAllocs[vault.id] = claimed;
+        remaining -= claimed;
+      }
     }
 
     setAllocations(newAllocs);
@@ -160,7 +163,7 @@ export function AddTransactionDialog({
     "Other",
   ]));
 
-  const totalAllocated  = Object.values(allocations).reduce((sum, v) => sum + v, 0);
+  const totalAllocated  = Object.values(allocations).reduce((sum, v) => sum + Number(v || 0), 0);
   const isOverAllocated = totalAllocated > amount;
   const toSpendable     = Math.max(0, amount - totalAllocated);
 
@@ -328,25 +331,31 @@ export function AddTransactionDialog({
                   </div>
 
                   <div className="space-y-2">
-                    {savingsBuckets.map(vault => (
-                      <div key={vault.id} className="grid grid-cols-3 items-center gap-2">
-                        <div className="col-span-2 flex flex-col min-w-0 pr-2">
-                          <Label className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
-                            {vault.name}
-                          </Label>
-                          <span className="text-[10px] font-mono truncate" style={{ color: "var(--text-muted)" }}>
-                            Bal: ${Number(vault.currentBalance).toLocaleString()} / ${vault.monthlyTarget}
-                          </span>
+                    {savingsBuckets.map(vault => {
+                      const allocatedValue = allocations[vault.id] || 0;
+                      return (
+                        <div key={vault.id} className="grid grid-cols-3 items-center gap-2">
+                          <div className="col-span-2 flex flex-col min-w-0 pr-2">
+                            <Label className="text-xs font-semibold truncate" style={{ color: "var(--text-primary)" }}>
+                              {vault.name}
+                            </Label>
+                            <span className="text-[10px] font-mono truncate" style={{ color: "var(--text-muted)" }}>
+                              Bal: ${Number(vault.currentBalance).toLocaleString()} / ${Number(vault.monthlyTarget).toLocaleString()}
+                            </span>
+                          </div>
+                          
+                          {/* THE FIX: Removed the specific text-right, h-8, and text-xs classes so it matches the main amount input */}
+                          <div className="col-span-1">
+                            <MoneyInput
+                              key={`vault-input-${vault.id}-${allocatedValue}`}
+                              value={allocatedValue}
+                              onChange={val => handleAllocationChange(vault.id, val)}
+                            />
+                          </div>
+
                         </div>
-                        <div className="col-span-1">
-                          <MoneyInput
-                            value={allocations[vault.id] || 0}
-                            onChange={val => handleAllocationChange(vault.id, val)}
-                            className="h-8 text-xs text-right"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {amount > 0 && (
