@@ -72,6 +72,7 @@ export default function App() {
   // --- 1. AUTH & USER STATE ---
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [settingsLoaded, setSettingsLoaded] = useState(false); // <-- SAFEGUARD LOCK ADDED
   const [userName, setUserName] = useState("User");
   const [savingsGoal, setSavingsGoal] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -95,7 +96,6 @@ export default function App() {
   const [showVerificationBanner, setShowVerificationBanner] = useState(false);
 
   // --- 3. CUSTOM HOOKS ---
-  // THE FIX: Added savingsBuckets and vault functions back into the pipeline
   const { 
     transactions, budgets, currentBudgets, savingsBuckets, loading: dataLoading, 
     addTransaction, updateTransaction, deleteTransaction, updateBudgets,
@@ -126,13 +126,18 @@ export default function App() {
           } else {
             setIsSetupComplete(false);
           }
+          
+          // ONLY UNLOCK AUTO-SAVE IF READ WAS SUCCESSFUL
+          setSettingsLoaded(true); 
+          
         } catch (error) {
           console.error("Error loading settings:", error);
-          setIsSetupComplete(false);
+          // If network fails, we DO NOT unlock settingsLoaded. This prevents destructive auto-saves.
         }
       } else {
         setUser(null);
         setIsSetupComplete(false);
+        setSettingsLoaded(false);
       }
       setAuthLoading(false);
     });
@@ -152,11 +157,12 @@ export default function App() {
   }, [user, userName, savingsGoal, notificationsEnabled, alertSettings, isSetupComplete]);
 
   useEffect(() => {
-    if (user && !authLoading && user.emailVerified) {
+    // Added settingsLoaded requirement here to prevent overwriting cloud data with empty defaults
+    if (user && !authLoading && settingsLoaded && user.emailVerified) {
       const handler = setTimeout(handleSaveSettings, 500);
       return () => clearTimeout(handler);
     }
-  }, [user, authLoading, userName, savingsGoal, notificationsEnabled, alertSettings, handleSaveSettings]);
+  }, [user, authLoading, settingsLoaded, userName, savingsGoal, notificationsEnabled, alertSettings, handleSaveSettings]);
 
   // --- 6. HANDLERS ---
   const handleLogout = async () => {
@@ -166,6 +172,7 @@ export default function App() {
     setActiveTab("dashboard");
     setAuthMode('landing');
     setIsSetupComplete(false);
+    setSettingsLoaded(false);
   };
 
   const handleLegalBack = () => setAuthMode('landing');
@@ -188,11 +195,11 @@ export default function App() {
       const uid = user.uid;
       const tSnaps = await getDocs(query(collection(db, "transactions"), where("userId", "==", uid)));
       const bSnaps = await getDocs(query(collection(db, "budgets"), where("userId", "==", uid)));
-      const sSnaps = await getDocs(query(collection(db, "savingsBuckets"), where("userId", "==", uid))); // Added vault deletion
+      const sSnaps = await getDocs(query(collection(db, "savingsBuckets"), where("userId", "==", uid))); 
       const batch = writeBatch(db);
       tSnaps.docs.forEach(d => batch.delete(d.ref));
       bSnaps.docs.forEach(d => batch.delete(d.ref));
-      sSnaps.docs.forEach(d => batch.delete(d.ref)); // Added vault deletion
+      sSnaps.docs.forEach(d => batch.delete(d.ref)); 
       batch.delete(doc(db, "userSettings", uid));
       await batch.commit();
       await deleteUser(user);
@@ -399,7 +406,7 @@ export default function App() {
                       <DashboardOverview 
                         budgets={currentBudgets} 
                         transactions={transactions} 
-                        savingsBuckets={savingsBuckets} // THE FIX: PASSED DATA HERE
+                        savingsBuckets={savingsBuckets}
                         onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                       />
                     </ErrorBoundary>
@@ -440,10 +447,10 @@ export default function App() {
                       <SettingsPage 
                         budgets={budgets} 
                         transactions={transactions}
-                        savingsBuckets={savingsBuckets} // THE FIX: PASSED DATA HERE
-                        onAddVault={addVault}           // THE FIX: PASSED DATA HERE
-                        onUpdateVault={updateVault}     // THE FIX: PASSED DATA HERE
-                        onDeleteVault={deleteVault}     // THE FIX: PASSED DATA HERE
+                        savingsBuckets={savingsBuckets} 
+                        onAddVault={addVault}           
+                        onUpdateVault={updateVault}     
+                        onDeleteVault={deleteVault}     
                         onUpdateTransaction={handleUpdateTransactionForArchive}
                         onDeleteTransaction={handleDeleteTransactionPermanently}
                         onNavigate={setAuthMode}
@@ -487,8 +494,8 @@ export default function App() {
                   onEditTransaction={(t) => { if (editingTransaction) updateTransaction(editingTransaction.id, t); setDialogOpen(false); }}
                   editingTransaction={editingTransaction}
                   budgets={budgets}
-                  savingsBuckets={savingsBuckets} // THE FIX: PASSED DATA HERE
-                  onUpdateVault={updateVault}     // THE FIX: PASSED DATA HERE
+                  savingsBuckets={savingsBuckets} 
+                  onUpdateVault={updateVault}     
                 />
               </>
             )
