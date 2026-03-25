@@ -60,7 +60,7 @@ exports.checkBudgetThresholds = onDocumentCreated("transactions/{transactionId}"
       alertSubject = "🚨 Fortis RED ALERT -- Cloud";
       alertMessage = `You exceeded your ${budget.category} budget! Limit: $${limit}. Spent: $${totalSpent}.`;
     } else if (usageRatio >= 0.8 && settings.budgetWarningEnabled) {
-      alertSubject = "⚠️ Fortis AMBER ALERT";
+      alertSubject = "⚠️ Fortis AMBER ALERT -- Cloud";
       alertMessage = `Warning: You reached ${Math.round(usageRatio * 100)}% of your ${budget.category} budget. Only $${limit - totalSpent} remaining.`;
     }
 
