@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { doc, writeBatch, collection } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -117,8 +117,11 @@ export function WelcomeSetup({ userId, onComplete }: WelcomeSetupProps) {
     setError("");
     try {
       const batch = writeBatch(db);
+      const userEmail = auth.currentUser?.email || "";
 
       batch.set(doc(db, "userSettings", userId), {
+        userId:               userId,
+        email:                userEmail, // Required for Nodemailer to find the destination
         userName:             name.trim(),
         monthlyIncome:        numericIncome,
         shieldAllocationPct:  shieldPercent,

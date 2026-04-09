@@ -118,7 +118,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
     const now = Date.now();
     const newBudget: Budget = {
       id:        editingBudget?.id || `budget_${now}`,
-      userId:    currentUserId, // Crucial for Cloud Functions trigger
+      userId:    currentUserId,
       category:  category.trim(),
       budgeted:  parseFloat(budgetAmount),
       spent:     editingBudget ? budgets.find(b => b.id === editingBudget.id)?.spent || 0 : 0,
