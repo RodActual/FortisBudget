@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { auth } from "../firebase"; // Ensure this path matches your firebase config file
 import type { Budget } from "../App";
 
 interface BudgetManagerProps {
@@ -43,7 +44,6 @@ const COMMON_CATEGORIES = [
 
 /**
  * ── VISUAL TIERING FOR BUDGET HEALTH ──────────────────────────────────────────
- * Exact match to the Dashboard visual logic (Green, Amber, Red, Black/Steel).
  */
 function getBudgetTier(spent: number, budgeted: number) {
   if (budgeted === 0) return { barColor: "var(--fortress-steel)", labelColor: "var(--fortress-steel)", label: "—" };
@@ -63,10 +63,12 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
   const [budgetAmount, setBudgetAmount] = useState("");
   const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
 
+  // Handle initialization of default budgets with the current User ID
   useEffect(() => {
-    if (budgets.length === 0) {
+    if (budgets.length === 0 && auth.currentUser) {
       const initialBudgets: Budget[] = INITIAL_BUDGETS.map((b, i) => ({
-        id: `budget_initial_${i}`,
+        id: `budget_initial_${i}_${auth.currentUser?.uid}`,
+        userId: auth.currentUser?.uid, // Link defaults to user
         category: b.category,
         budgeted: b.budgeted,
         spent: 0,
@@ -76,7 +78,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
       const t = setTimeout(() => onUpdateBudgets(initialBudgets), 100);
       return () => clearTimeout(t);
     }
-  }, [budgets]);
+  }, [budgets, auth.currentUser]);
 
   const openAddDialog = () => {
     setEditingBudget(null);
@@ -100,6 +102,13 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
       alert("Please enter a valid category and budget amount");
       return;
     }
+
+    const currentUserId = auth.currentUser?.uid;
+    if (!currentUserId) {
+      alert("Session error: Please log in again to save budgets.");
+      return;
+    }
+
     const colorInUse = budgets.find(b => b.color === selectedColor && b.id !== editingBudget?.id);
     if (colorInUse) {
       alert(`This color is already used by "${colorInUse.category}". Please choose another.`);
@@ -109,6 +118,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
     const now = Date.now();
     const newBudget: Budget = {
       id:        editingBudget?.id || `budget_${now}`,
+      userId:    currentUserId, // Crucial for Cloud Functions trigger
       category:  category.trim(),
       budgeted:  parseFloat(budgetAmount),
       spent:     editingBudget ? budgets.find(b => b.id === editingBudget.id)?.spent || 0 : 0,
@@ -166,11 +176,10 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
         <CardContent>
           {budgets.length === 0 ? (
             <p className="text-center py-8 text-sm" style={{ color: "var(--text-muted)" }}>
-              Loading default budgets…
+              Initialize your Fortis budget categories...
             </p>
           ) : (
             <>
-              {/* ── Summary strip ─────────────────────────────────────────── */}
               <div
                 className="rounded-md p-4 mb-5 grid grid-cols-2 gap-4 border"
                 style={{ backgroundColor: "var(--surface-raised)", borderColor: "var(--border-subtle)" }}
@@ -196,7 +205,6 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                 </div>
               </div>
 
-              {/* ── Budget rows ───────────────────────────────────────────── */}
               <div className="space-y-4">
                 {budgets.map((budget) => {
                   const pct  = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
@@ -212,9 +220,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                         borderColor: "var(--border-subtle)",
                       }}
                     >
-                      {/* Row header */}
                       <div className="flex items-center justify-between mb-2.5">
-                        
                         <div className="flex items-center gap-2.5">
                           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: budget.color }} />
                           <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
@@ -234,13 +240,11 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                             {tier.label}
                           </span>
                           
-                          {/* Action Buttons */}
                           <div className="flex items-center gap-0.5 ml-1">
                             <button
                               onClick={() => openEditDialog(budget)}
                               className="p-1 rounded transition-colors hover:bg-slate-100"
                               style={{ color: "var(--fortress-steel)" }}
-                              title="Edit Budget"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
@@ -248,16 +252,13 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                               onClick={() => handleDelete(budget.id!)}
                               className="p-1 rounded transition-colors hover:bg-red-50"
                               style={{ color: "var(--castle-red)" }}
-                              title="Delete Budget"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </div>
-
                       </div>
 
-                      {/* Progress bar */}
                       <div
                         className="w-full h-1.5 rounded-full overflow-hidden"
                         style={{ backgroundColor: "var(--border-subtle)" }}
@@ -271,7 +272,6 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                         />
                       </div>
 
-                      {/* Over-budget callout */}
                       {isOver && (
                         <p className="text-[11px] font-bold font-mono mt-2" style={{ color: "var(--castle-red)" }}>
                           ▲ ${(budget.spent - budget.budgeted).toFixed(2)} over budget
@@ -286,7 +286,6 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
         </CardContent>
       </Card>
 
-      {/* ── Add / Edit Dialog ────────────────────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}>
           <DialogHeader>
@@ -301,7 +300,6 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Category */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--fortress-steel)" }}>
                 Category Name
@@ -322,7 +320,6 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
               </datalist>
             </div>
 
-            {/* Amount */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--fortress-steel)" }}>
                 Budget Amount
@@ -347,7 +344,6 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
               </div>
             </div>
 
-            {/* Color picker */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--fortress-steel)" }}>
                 Category Color
