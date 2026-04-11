@@ -1,3 +1,5 @@
+// @ts-ignore: Suppress side-effect import error for CSS
+
 import "./globals.css";
 import { useState, useEffect, useCallback } from "react";
 import { onAuthStateChanged } from "firebase/auth";
