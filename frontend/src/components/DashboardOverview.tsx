@@ -9,9 +9,12 @@ import {
   ShieldCheck, 
   Infinity, 
   AlertCircle,
-  ShieldAlert
+  ShieldAlert,
+  CalendarClock,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
-import type { Budget, Transaction } from "../App";
+import type { Budget, Transaction, RecurringRule } from "../App";
 import { DailyTipCard } from "./DailyTipCard";
 import { useUserSettings } from "../hooks/useUserSettings";
 import type { SavingsVault } from "../utils/shieldLogic";
@@ -20,6 +23,9 @@ interface DashboardOverviewProps {
   budgets: Budget[];
   transactions: Transaction[];
   savingsBuckets?: SavingsVault[];
+  pendingApprovals?: RecurringRule[]; // NEW
+  onAcceptRecurring?: (rule: RecurringRule) => void; // NEW
+  onSkipRecurring?: (rule: RecurringRule) => void; // NEW
   onOpenAddTransaction: () => void;
 }
 
@@ -82,6 +88,9 @@ export function DashboardOverview({
   budgets,
   transactions,
   savingsBuckets = [],
+  pendingApprovals = [], // NEW
+  onAcceptRecurring,     // NEW
+  onSkipRecurring,       // NEW
   onOpenAddTransaction,
 }: DashboardOverviewProps) {
   const { userName, shieldAllocationPct } = useUserSettings();
@@ -100,13 +109,8 @@ export function DashboardOverview({
 
     const netBalance = totalIncome - totalExpenses;
 
-    // Shield Target is a reference/goal metric only — not used for spendable calc
     const shieldTarget = totalIncome * (shieldAllocationPct / 100);
 
-    // BUG FIX #1: Available Budget uses ACTUAL vault balances (real allocations
-    // the user has made), NOT the static shield percentage from onboarding.
-    // Old (broken): availableToSpend = totalIncome - shieldTarget - totalExpenses
-    // New (correct): availableToSpend = netBalance - totalVaultBalance
     const totalVaultBalance = savingsBuckets.reduce(
       (sum, v) => sum + Number(v.currentBalance || 0), 0
     );
@@ -135,7 +139,7 @@ export function DashboardOverview({
 
       {/* ─── ROW 1: WELCOME & PRIMARY ACTION ─── */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="space-y-1">
+        <div className="space-y-1 w-full text-center md:text-left">
           <h1 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
             Welcome back, <span style={{ color: 'var(--castle-red)' }}>{userName}</span>
           </h1>
@@ -157,6 +161,53 @@ export function DashboardOverview({
           Log Transaction
         </Button>
       </div>
+
+      {/* ─── NEW: PENDING APPROVALS BANNER ─── */}
+      {pendingApprovals.length > 0 && (
+        <Card className="border-2 animate-in slide-in-from-top-4" style={{ borderColor: 'var(--safety-amber)', backgroundColor: '#FFFBEB' }}>
+          <CardHeader className="pb-2 flex flex-row items-center gap-2">
+            <CalendarClock className="w-5 h-5" style={{ color: 'var(--safety-amber)' }} />
+            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--engine-navy)' }}>
+              Action Required: {pendingApprovals.length} Recurring Item{pendingApprovals.length > 1 ? 's' : ''} Due
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {pendingApprovals.map(rule => (
+              <div 
+                key={rule.id} 
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-white shadow-sm gap-3"
+                style={{ borderColor: 'var(--border-subtle)' }}
+              >
+                <div className="min-w-0">
+                  <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{rule.description}</p>
+                  <p className="text-xs font-mono font-medium mt-1" style={{ color: rule.type === 'expense' ? 'var(--castle-red)' : 'var(--field-green)' }}>
+                    {rule.type === 'expense' ? '−' : '+'}${Number(rule.amount).toFixed(2)} <span className="text-[10px] uppercase font-sans ml-1" style={{ color: 'var(--fortress-steel)' }}>({rule.category})</span>
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 sm:flex-none text-xs font-bold"
+                    onClick={() => onSkipRecurring && onSkipRecurring(rule)}
+                    style={{ color: 'var(--fortress-steel)', borderColor: 'var(--border-subtle)' }}
+                  >
+                    <XCircle className="w-3.5 h-3.5 mr-1.5" /> Skip Month
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    className="flex-1 sm:flex-none text-xs font-bold text-white"
+                    onClick={() => onAcceptRecurring && onAcceptRecurring(rule)}
+                    style={{ backgroundColor: 'var(--engine-navy)' }}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Log & Approve
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <DailyTipCard />
 

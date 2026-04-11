@@ -48,7 +48,19 @@ export interface Transaction {
   userId?: string;
   archived?: boolean; 
 }
-
+export interface StagedTransaction extends Omit<Transaction, "id"> {
+  suggestRecurring?: boolean;
+}
+export interface RecurringRule {
+  id?: string;
+  userId: string;
+  description: string;
+  amount: number;
+  category: string;
+  type: "income" | "expense";
+  frequency: "weekly" | "monthly" | "yearly";
+  nextDueDate: number; // Stored as a Unix timestamp (Date.now())
+}
 export interface Budget {
   lastReset: number;
   id?: string;
@@ -110,7 +122,9 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
   const { 
     transactions, budgets, currentBudgets, savingsBuckets, loading: dataLoading, 
     addTransaction, updateTransaction, deleteTransaction, updateBudgets,
-    addVault, updateVault, deleteVault 
+    addVault, updateVault, deleteVault, recurringRules, 
+    pendingApprovals, addRecurringRule, deleteRecurringRule, 
+    acceptRecurringTransaction, skipRecurringTransaction
   } = useFinancialData(user);
 
   const { showWarning, continueSession, logout } = useInactivity(user);
@@ -435,6 +449,9 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
                         budgets={currentBudgets} 
                         transactions={transactions} 
                         savingsBuckets={savingsBuckets}
+                        pendingApprovals={pendingApprovals}
+                        onAcceptRecurring={acceptRecurringTransaction}
+                        onSkipRecurring={skipRecurringTransaction}
                         onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                       />
                     </ErrorBoundary>
@@ -445,6 +462,9 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
                       <ExpenseTracking 
                         transactions={transactions} 
                         budgets={budgets} 
+                        recurringRules={recurringRules}
+                        onAddRecurringRule={addRecurringRule}
+                        onDeleteRecurringRule={deleteRecurringRule}
                         onOpenAddTransaction={() => { setEditingTransaction(null); setDialogOpen(true); }} 
                         onEdit={(t) => { setEditingTransaction(t); setDialogOpen(true); }} 
                         onDelete={deleteTransaction} 

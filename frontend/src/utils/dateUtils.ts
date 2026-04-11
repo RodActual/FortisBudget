@@ -206,3 +206,26 @@ export const getStartOfCurrentMonth = (): Date => {
 export const getStartOfCurrentMonthTimestamp = (): number => {
   return getStartOfCurrentMonth().getTime();
 };
+
+/**
+ * Calculate the next due date based on frequency
+ * @param currentDueDate - Timestamp of current due date
+ * @param frequency - 'weekly', 'monthly', or 'yearly'
+ * @returns Unix timestamp of next due date
+ */
+export const calculateNextDueDate = (
+  currentDueDate: number,
+  frequency: "weekly" | "monthly" | "yearly"
+): number => {
+  const date = new Date(currentDueDate);
+  
+  if (frequency === "weekly") {
+    date.setDate(date.getDate() + 7);
+  } else if (frequency === "monthly") {
+    date.setMonth(date.getMonth() + 1);
+  } else if (frequency === "yearly") {
+    date.setFullYear(date.getFullYear() + 1);
+  }
+  
+  return date.getTime();
+};
