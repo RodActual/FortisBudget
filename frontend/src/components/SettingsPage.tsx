@@ -187,8 +187,6 @@ export function SettingsPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-
-            {/* Name */}
             <div className="space-y-1.5">
               <Label htmlFor="userName" style={labelStyle}>Your Name</Label>
               <Input
@@ -199,7 +197,6 @@ export function SettingsPage({
               />
             </div>
 
-            {/* Income + Shield — equal columns, consistent height */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="income" style={labelStyle}>Monthly Net Income</Label>
@@ -293,7 +290,7 @@ export function SettingsPage({
             <div>
               <CardTitle
                 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2"
-                style={{ color: "var(--engine-navy)" }}
+                style={{ color: "var(--text-primary)" }}
               >
                 <ShieldCheck className="h-4 w-4" /> Multi-Vault Config
               </CardTitle>
@@ -306,7 +303,7 @@ export function SettingsPage({
                 size="sm"
                 onClick={() => setIsAddingVault(true)}
                 className="h-8 font-bold text-white"
-                style={{ backgroundColor: "var(--engine-navy)", border: "none" }}
+                style={{ backgroundColor: "var(--castle-red)", border: "none" }}
               >
                 <Plus className="h-4 w-4 mr-1" /> New Vault
               </Button>
@@ -337,7 +334,7 @@ export function SettingsPage({
                     <Input type="number" value={vaultForm.ceilingAmount} onChange={e => setVaultForm({ ...vaultForm, ceilingAmount: e.target.value })} style={inputStyle} placeholder="1000" />
                   </div>
                 </div>
-                <Button onClick={handleSaveVault} className="w-full font-bold text-white mt-2" style={{ backgroundColor: "var(--engine-navy)", border: "none" }}>
+                <Button onClick={handleSaveVault} className="w-full font-bold text-white mt-2" style={{ backgroundColor: "var(--castle-red)", border: "none" }}>
                   <Save className="h-4 w-4 mr-2" /> Save Vault
                 </Button>
               </div>
@@ -357,7 +354,7 @@ export function SettingsPage({
                         </p>
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => startEditVault(v)} className="h-8 w-8 p-0" style={{ color: "var(--engine-navy)" }}><Edit2 className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => startEditVault(v)} className="h-8 w-8 p-0" style={{ color: "var(--text-primary)" }}><Edit2 className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="sm" onClick={() => { if (window.confirm(`Delete ${v.name}?`)) onDeleteVault(v.id); }} className="h-8 w-8 p-0" style={{ color: "var(--castle-red)" }}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </div>
@@ -382,32 +379,33 @@ export function SettingsPage({
             <Input type="password" placeholder="Confirm New Password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inputStyle} />
             {passwordError   && <p className="text-xs font-semibold" style={{ color: "var(--castle-red)"  }}>{passwordError}</p>}
             {passwordSuccess && <p className="text-xs font-semibold" style={{ color: "var(--field-green)" }}>{passwordSuccess}</p>}
-            <Button onClick={handlePasswordUpdate} variant="outline" className="w-full font-bold" disabled={isUpdatingPassword} style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}>
+            <Button onClick={handlePasswordUpdate} variant="outline" className="w-full font-bold" disabled={isUpdatingPassword} style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>
               {isUpdatingPassword ? "Updating…" : "Update Password"}
             </Button>
           </CardContent>
         </Card>
+
         {/* ── Support the Project ────────────────────────────────────────────── */}
-        <Card className="border" style={{ borderColor: "#FDA4AF", backgroundColor: "#FFF1F2" }}>
+        <Card className="border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface-raised)" }}>
           <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "#000000" }}>
-              <Heart className="h-4 w-4" style={{ color: "#E11D48" }} /> Support the Project
+            <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+              <Heart className="h-4 w-4" style={{ color: "var(--castle-red)" }} /> Support the Project
             </CardTitle>
-            <CardDescription style={{ color: "#000000" }}>
+            <CardDescription style={{ color: "var(--fortress-steel)" }}>
               FortisBudget is free and open source. If it has helped you, consider sponsoring development.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm leading-relaxed" style={{ color: "#000000" }}>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
               Your support keeps the servers running, funds new features, and helps maintain the zero-ad, zero-tracking promise.
             </p>
             <Button
               asChild
               className="w-full sm:w-auto font-bold text-white gap-2"
               style={{
-                backgroundColor: "#E11D48",
+                backgroundColor: "var(--castle-red)",
                 border: "none",
-                boxShadow: "0 2px 0 0 #9F1239",
+                boxShadow: "0 2px 0 0 var(--castle-red-dark)",
               }}
             >
               <a
@@ -419,19 +417,16 @@ export function SettingsPage({
                 Sponsor on GitHub
               </a>
             </Button>
-            <p className="text-xs" style={{ color: "#000000", opacity: 0.6 }}>
-              Opens GitHub Sponsors in a new tab.
-            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* ── Legal & Compliance Transactions ─────────────────────────────────────────────── */}
+      {/* ── Archived Transactions ────────────────────────────────────────────────── */}
       {archivedTransactions.length > 0 && (
         <Card className="border" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface-raised)" }}>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-              <Archive className="h-4 w-4" style={{ color: "var(--engine-navy)" }} />
+              <Archive className="h-4 w-4" style={{ color: "var(--text-primary)" }} />
               Archived Transactions ({archivedTransactions.length})
             </CardTitle>
             <CardDescription style={{ color: "var(--fortress-steel)" }}>Hidden from your main list but still counted in analytics.</CardDescription>
@@ -456,14 +451,14 @@ export function SettingsPage({
                       </TableCell>
                       <TableCell className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{t.description}</TableCell>
                       <TableCell>
-                        <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: "var(--surface-raised)", color: "var(--fortress-steel)", border: "1px solid var(--border-subtle)" }}>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded" style={{ backgroundColor: "var(--surface-raised)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)" }}>
                           {t.category}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-bold font-mono text-sm" style={{ color: "var(--fortress-steel)" }}>${t.amount.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-bold font-mono text-sm" style={{ color: "var(--text-primary)" }}>${t.amount.toFixed(2)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" className="h-8 text-xs font-bold gap-1" style={{ color: "var(--engine-navy)" }} onClick={() => handleRestoreTransaction(t)}><RotateCcw className="h-3 w-3" /> Restore</Button>
+                          <Button variant="ghost" size="sm" className="h-8 text-xs font-bold gap-1" style={{ color: "var(--text-primary)" }} onClick={() => handleRestoreTransaction(t)}><RotateCcw className="h-3 w-3" /> Restore</Button>
                           <Button variant="ghost" size="sm" className="h-8 text-xs font-bold gap-1" style={{ color: "var(--castle-red)" }} onClick={() => handleDeletePermanently(t)}><Trash2 className="h-3 w-3" /> Delete</Button>
                         </div>
                       </TableCell>
@@ -473,7 +468,7 @@ export function SettingsPage({
               </Table>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 pt-1">
-              <Button variant="outline" onClick={handleRestoreAll} className="flex-1 font-bold gap-2" style={{ borderColor: "var(--engine-navy)", color: "var(--engine-navy)" }}>
+              <Button variant="outline" onClick={handleRestoreAll} className="flex-1 font-bold gap-2" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>
                 <RotateCcw className="h-4 w-4" /> Restore All ({archivedTransactions.length})
               </Button>
               <AlertDialog>
@@ -508,8 +503,8 @@ export function SettingsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button variant="outline" size="sm" onClick={() => onNavigate("privacy")} className="flex-1 font-bold uppercase tracking-wide text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}>Privacy Policy</Button>
-            <Button variant="outline" size="sm" onClick={() => onNavigate("terms")} className="flex-1 font-bold uppercase tracking-wide text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--fortress-steel)" }}>Terms of Service</Button>
+            <Button variant="outline" size="sm" onClick={() => onNavigate("privacy")} className="flex-1 font-bold uppercase tracking-wide text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>Privacy Policy</Button>
+            <Button variant="outline" size="sm" onClick={() => onNavigate("terms")} className="flex-1 font-bold uppercase tracking-wide text-xs" style={{ borderColor: "var(--border-subtle)", color: "var(--text-primary)" }}>Terms of Service</Button>
           </div>
           <div className="flex flex-col items-center justify-center w-full pt-4 opacity-40">
             <p className="text-[10px] font-mono uppercase" style={{ color: "var(--text-muted)" }}>
@@ -521,7 +516,7 @@ export function SettingsPage({
 
 
       {/* ── Danger Zone ───────────────────────────────────────────────────────── */}
-      <Card className="border" style={{ borderColor: "var(--castle-red)", backgroundColor: "#FEF2F2" }}>
+      <Card className="border" style={{ borderColor: "var(--castle-red)", backgroundColor: "var(--surface-raised)" }}>
         <CardHeader>
           <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: "var(--castle-red)" }}>
             <AlertTriangle className="h-4 w-4" /> Danger Zone

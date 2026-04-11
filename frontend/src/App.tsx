@@ -30,7 +30,7 @@ import { FortisLogo } from "./components/FortisLogo";
 // UI
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
-import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen, ArrowLeft } from "lucide-react"; 
+import { LayoutDashboard, Receipt, BarChart3, Settings, LogOut, BookOpen, ArrowLeft, Sun, Moon } from "lucide-react"; 
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 
 // Hooks
@@ -59,7 +59,7 @@ export interface RecurringRule {
   category: string;
   type: "income" | "expense";
   frequency: "weekly" | "monthly" | "yearly";
-  nextDueDate: number; // Stored as a Unix timestamp (Date.now())
+  nextDueDate: number; 
 }
 export interface Budget {
   lastReset: number;
@@ -85,11 +85,12 @@ export default function App() {
   // --- 1. AUTH & USER STATE ---
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [settingsLoaded, setSettingsLoaded] = useState(false); // <-- SAFEGUARD LOCK ADDED
+  const [settingsLoaded, setSettingsLoaded] = useState(false); 
   const [userName, setUserName] = useState("User");
   const [savingsGoal, setSavingsGoal] = useState(0);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isSetupComplete, setIsSetupComplete] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
     budgetWarningEnabled: true,
@@ -101,7 +102,7 @@ export default function App() {
     dismissedAlertIds: [],
   });
 
-const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
+  const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
 
   // Check URL on initial load for Firebase verification parameters
   useEffect(() => {
@@ -129,7 +130,16 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
 
   const { showWarning, continueSession, logout } = useInactivity(user);
 
-  // --- 4. AUTH EFFECTS ---
+  // --- 4. THEME EFFECT ---
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // --- 5. AUTH EFFECTS ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -147,6 +157,7 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
             setSavingsGoal(data.savingsGoal || 0);
             setNotificationsEnabled(data.notificationsEnabled ?? true);
             setIsSetupComplete(data.isSetupComplete === true);
+            setDarkMode(data.darkMode ?? false);
             if (data.alertSettings) setAlertSettings(data.alertSettings);
           } else {
             setIsSetupComplete(false);
@@ -157,7 +168,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
           
         } catch (error) {
           console.error("Error loading settings:", error);
-          // If network fails, we DO NOT unlock settingsLoaded. This prevents destructive auto-saves.
         }
       } else {
         setUser(null);
@@ -169,27 +179,31 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
     return () => unsubscribe();
   }, []);
 
-  // --- 5. AUTO-SAVE SETTINGS ---
+  // --- 6. AUTO-SAVE SETTINGS ---
   const handleSaveSettings = useCallback(async () => {
     if (!user) return;
     try {
       const settingsRef = doc(db, "userSettings", user.uid);
       await setDoc(settingsRef, {
-        userName, savingsGoal, notificationsEnabled, alertSettings, isSetupComplete, 
+        userName, 
+        savingsGoal, 
+        notificationsEnabled, 
+        alertSettings, 
+        isSetupComplete, 
+        darkMode,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
     } catch (error) { console.error("Error saving settings:", error); }
-  }, [user, userName, savingsGoal, notificationsEnabled, alertSettings, isSetupComplete]);
+  }, [user, userName, savingsGoal, notificationsEnabled, alertSettings, isSetupComplete, darkMode]);
 
   useEffect(() => {
-    // Added settingsLoaded requirement here to prevent overwriting cloud data with empty defaults
     if (user && !authLoading && settingsLoaded && user.emailVerified) {
       const handler = setTimeout(handleSaveSettings, 500);
       return () => clearTimeout(handler);
     }
-  }, [user, authLoading, settingsLoaded, userName, savingsGoal, notificationsEnabled, alertSettings, handleSaveSettings]);
+  }, [user, authLoading, settingsLoaded, userName, savingsGoal, notificationsEnabled, alertSettings, darkMode, handleSaveSettings]);
 
-  // --- 6. HANDLERS ---
+  // --- 7. HANDLERS ---
   const handleLogout = async () => {
     await logout();
     setUserName("User");
@@ -198,6 +212,7 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
     setAuthMode('landing');
     setIsSetupComplete(false);
     setSettingsLoaded(false);
+    setDarkMode(false);
   };
 
   const handleLegalBack = () => setAuthMode('landing');
@@ -235,7 +250,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
     }
   };
 
-  // --- 7. ARCHIVE HANDLERS ---
   const handleUpdateTransactionForArchive = async (id: string, updates: Partial<Transaction>) => {
     if (!user) return;
     try {
@@ -260,12 +274,11 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
     }
   };
 
-  // --- 8. CSV IMPORT HANDLER ---
   const handleImportTransactions = async (rows: Omit<Transaction, "id">[]) => {
     await Promise.all(rows.map(row => addTransaction(row)));
   };
 
-  // --- 9. RENDERING ---
+  // --- 8. RENDERING ---
   if (authLoading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="flex flex-col items-center gap-4">
@@ -275,19 +288,15 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
     </div>
   );
 
-  // Global Legal Overlays
   if (authMode === 'privacy') return <PrivacyPolicy onBack={handleLegalBack} />;
   if (authMode === 'terms') return <TermsOfService onBack={handleLegalBack} />;
 
-  // NEW: Catch the verification link
   if (isVerifyingRoute) {
     return (
       <VerifyEmail 
         onComplete={() => {
           setIsVerifyingRoute(false);
-          // Clean the ugly URL parameters out of the browser address bar
           window.history.replaceState({}, document.title, window.location.pathname);
-          // If they are logged in, reload to refresh their Firebase Auth token
           if (auth.currentUser) {
             window.location.reload();
           }
@@ -355,7 +364,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
-              {/* Email display */}
               <span 
                 className="text-xs font-medium hidden sm:inline px-2 py-1 rounded"
                 style={{ color: '#94A3B8', backgroundColor: 'rgba(255,255,255,0.06)' }}
@@ -363,7 +371,16 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
                 {user?.email}
               </span>
 
-              {/* Notification bell */}
+              {/* Theme Toggle Button */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setDarkMode(!darkMode)}
+                className="text-white hover:bg-white/10"
+              >
+                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+
               <div className="text-white">
                 <AlertsNotificationBell 
                   budgets={currentBudgets} 
@@ -373,7 +390,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
                 />
               </div>
 
-              {/* Logout */}
               <Button 
                 onClick={handleLogout} 
                 size="sm"
@@ -390,7 +406,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
             </div>
           </header>
 
-          {/* Verification Banner */}
           {showVerificationBanner && (
             <EmailVerification 
               onVerified={async () => { 
@@ -509,7 +524,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
                   </TabsContent>
                 </Tabs>
 
-                {/* Internal Legal Footer */}
                 <footer 
                   className="flex justify-center gap-6 mt-8 pb-8 text-[10px] uppercase tracking-widest font-mono"
                   style={{ color: 'var(--text-muted)' }}
@@ -518,8 +532,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
                     onClick={() => setAuthMode('privacy')} 
                     className="hover:underline transition-colors"
                     style={{ color: 'inherit' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--castle-red)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                   >
                     Privacy Policy
                   </button>
@@ -527,8 +539,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
                     onClick={() => setAuthMode('terms')} 
                     className="hover:underline transition-colors"
                     style={{ color: 'inherit' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--castle-red)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
                   >
                     Terms of Service
                   </button>
@@ -548,7 +558,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
               </>
             )
           ) : (
-            /* Email not verified gate */
             <div 
               className="text-center py-20 border-2 border-dashed rounded-lg mt-6"
               style={{ 
@@ -565,7 +574,6 @@ const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
             </div>
           )}
 
-          {/* Inactivity Warning Dialog */}
           <AlertDialog open={showWarning} onOpenChange={() => {}}>
             <AlertDialogContent>
               <AlertDialogHeader>

@@ -36,7 +36,7 @@ function getVaultProgressColor(pct: number): string {
 }
 
 function getBudgetTier(spent: number, budgeted: number) {
-  if (budgeted === 0) return { className: "",             barColor: "#475569", labelColor: "#475569", label: "—" };
+  if (budgeted === 0) return { className: "",              barColor: "#475569", labelColor: "#475569", label: "—" };
   const pct = (spent / budgeted) * 100;
   if (pct > 100)  return { className: "budget-combat",  barColor: "#000000", labelColor: "#FCA5A5", label: "OVER BUDGET" };
   if (pct >= 80)  return { className: "budget-breach",  barColor: "#8B1219", labelColor: "#8B1219", label: "CRITICAL" };
@@ -55,7 +55,6 @@ export function DashboardOverview({
 }: DashboardOverviewProps) {
   const { userName, shieldAllocationPct } = useUserSettings();
 
-  // ─── CORE MATHEMATICAL ENGINE ────────────────────────────────────────────
   const stats = useMemo(() => {
     const active = transactions.filter(t => !t.archived);
 
@@ -86,7 +85,6 @@ export function DashboardOverview({
     };
   }, [transactions, savingsBuckets, shieldAllocationPct]);
 
-  // ─── RECENT ACTIVITY ────────────────────────────────────────────────────
   const recentTransactions = useMemo(() => (
     [...transactions]
       .filter(t => !t.archived)
@@ -124,10 +122,10 @@ export function DashboardOverview({
 
       {/* ─── PENDING APPROVALS BANNER ─── */}
       {pendingApprovals.length > 0 && (
-        <Card className="border-2 animate-in slide-in-from-top-4" style={{ borderColor: 'var(--safety-amber)', backgroundColor: '#FFFBEB' }}>
+        <Card className="border-2 animate-in slide-in-from-top-4" style={{ borderColor: 'var(--safety-amber)', backgroundColor: 'var(--surface-raised)' }}>
           <CardHeader className="pb-2 flex flex-row items-center gap-2">
             <CalendarClock className="w-5 h-5" style={{ color: 'var(--safety-amber)' }} />
-            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--engine-navy)' }}>
+            <CardTitle className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>
               Action Required: {pendingApprovals.length} Recurring Item{pendingApprovals.length > 1 ? 's' : ''} Due
             </CardTitle>
           </CardHeader>
@@ -135,7 +133,7 @@ export function DashboardOverview({
             {pendingApprovals.map(rule => (
               <div 
                 key={rule.id} 
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-white shadow-sm gap-3"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-white dark:bg-slate-900 shadow-sm gap-3"
                 style={{ borderColor: 'var(--border-subtle)' }}
               >
                 <div className="min-w-0">
@@ -191,18 +189,18 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Card 2: Shield Target */}
+        {/* Card 2: Shield Target — Fixed Visibility */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--engine-navy)' }}>
+            <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-primary)' }}>
               Shield Target
             </CardTitle>
-            <div className="p-1.5 rounded-md" style={{ backgroundColor: '#DBEAFE' }}>
-              <ShieldAlert className="h-4 w-4" style={{ color: 'var(--engine-navy)' }} />
+            <div className="p-1.5 rounded-md" style={{ backgroundColor: 'var(--border-subtle)' }}>
+              <ShieldAlert className="h-4 w-4" style={{ color: 'var(--text-primary)' }} />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono" style={{ color: 'var(--engine-navy)' }}>
+            <div className="text-2xl font-bold font-mono" style={{ color: 'var(--text-primary)' }}>
               ${stats.shieldTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-[10px] mt-1 text-muted-foreground uppercase font-bold">{shieldAllocationPct}% Reserve Goal</p>
@@ -215,7 +213,7 @@ export function DashboardOverview({
             <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
               Total Expenses
             </CardTitle>
-            <div className="p-1.5 rounded-md" style={{ backgroundColor: '#FEE2E2' }}>
+            <div className="p-1.5 rounded-md" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
               <TrendingDown className="h-4 w-4" style={{ color: 'var(--castle-red)' }} />
             </div>
           </CardHeader>
@@ -233,7 +231,7 @@ export function DashboardOverview({
             <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--field-green)' }}>
               Available Budget
             </CardTitle>
-            <div className="p-1.5 rounded-md" style={{ backgroundColor: '#DCFCE7' }}>
+            <div className="p-1.5 rounded-md" style={{ backgroundColor: 'rgba(22, 101, 52, 0.1)' }}>
               <ShieldCheck className="h-4 w-4" style={{ color: 'var(--field-green)' }} />
             </div>
           </CardHeader>
@@ -248,10 +246,10 @@ export function DashboardOverview({
         </Card>
       </div>
 
-      {/* ─── ROW 3: VAULT PROGRESS SECTION ─── */}
+      {/* ─── ROW 3: VAULT PROGRESS SECTION — Fixed Title Visibility ─── */}
       <Card className="border shadow-sm" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}>
         <CardHeader className="pb-3 border-b" style={{ borderColor: 'var(--border-subtle)' }}>
-          <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--engine-navy)' }}>
+          <CardTitle className="text-sm font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
             <ShieldCheck className="w-4 h-4" /> Active Savings Vaults
           </CardTitle>
         </CardHeader>
@@ -276,16 +274,16 @@ export function DashboardOverview({
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{vault.name}</span>
                       {isCapped ? (
-                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: '#DCFCE7', color: 'var(--field-green)' }}>Maxed</span>
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(22, 101, 52, 0.1)', color: 'var(--field-green)' }}>Maxed</span>
                       ) : !hasCeiling ? (
-                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded flex items-center gap-1" style={{ backgroundColor: '#F1F5F9', color: 'var(--engine-navy)' }}>
+                        <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded flex items-center gap-1" style={{ backgroundColor: 'var(--surface-raised)', color: 'var(--text-primary)' }}>
                           <Infinity className="w-3 h-3" /> Uncapped
                         </span>
                       ) : null}
                     </div>
 
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-bold font-mono" style={{ color: 'var(--engine-navy)' }}>
+                      <span className="text-xl font-bold font-mono" style={{ color: 'var(--text-primary)' }}>
                         ${Number(vault.currentBalance).toLocaleString()}
                       </span>
                       {hasCeiling && (
@@ -320,8 +318,6 @@ export function DashboardOverview({
 
       {/* ─── ROW 4: BUDGET STATUS & RECENT ACTIVITY ─── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-
-        {/* Budget Status */}
         <Card className="col-span-4 border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
@@ -363,7 +359,7 @@ export function DashboardOverview({
                             className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
                             style={{
                               color: tier.labelColor,
-                              backgroundColor: isCombat ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)',
+                              backgroundColor: isCombat ? "rgba(255,255,255,0.12)" : "var(--border-subtle)"
                             }}
                           >
                             {tier.label}
@@ -371,13 +367,12 @@ export function DashboardOverview({
                         </div>
                       </div>
 
-                      {/* NEW PROGRESS BAR REPLACEMENT */}
                       <div style={{ 
                         width: "100%", 
                         height: "6px", 
                         borderRadius: "9999px", 
                         overflow: "hidden",
-                        backgroundColor: isCombat ? "rgba(255,255,255,0.12)" : "#E2E8F0"
+                        backgroundColor: isCombat ? "rgba(255,255,255,0.12)" : "var(--border-subtle)"
                       }}>
                         <div style={{ 
                           width: `${Math.min(pct, 100)}%`, 
@@ -401,7 +396,6 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
         <Card className="col-span-3 border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
@@ -420,7 +414,7 @@ export function DashboardOverview({
                     style={{ borderColor: 'var(--border-subtle)' }}
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="p-2 rounded-md" style={{ backgroundColor: t.type === "income" ? "#DCFCE7" : "#FEE2E2" }}>
+                      <div className="p-2 rounded-md" style={{ backgroundColor: t.type === "income" ? "rgba(22, 101, 52, 0.1)" : "rgba(239, 68, 68, 0.1)" }}>
                         {t.type === "income"
                           ? <TrendingUp   className="h-4 w-4" style={{ color: 'var(--field-green)' }} />
                           : <TrendingDown className="h-4 w-4" style={{ color: 'var(--castle-red)' }} />

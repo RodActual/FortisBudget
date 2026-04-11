@@ -246,7 +246,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                         height: "6px", 
                         borderRadius: "9999px", 
                         overflow: "hidden",
-                        backgroundColor: isCombat ? "rgba(255,255,255,0.12)" : "#E2E8F0"
+                        backgroundColor: isCombat ? "rgba(255,255,255,0.12)" : "var(--border-subtle)"
                       }}>
                         <div style={{ 
                           width: `${Math.min(pct, 100)}%`, 
