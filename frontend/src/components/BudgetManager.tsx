@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { auth } from "../firebase"; // Ensure this path matches your firebase config file
+import { auth } from "../firebase";
 import type { Budget } from "../App";
 
 interface BudgetManagerProps {
@@ -20,11 +20,6 @@ interface BudgetManagerProps {
   onUpdateBudgets: (budgets: Budget[]) => void;
   transactions: any[];
 }
-
-const DEFAULT_COLORS = [
-  "#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899",
-  "#06B6D4", "#EF4444", "#6366F1", "#F97316", "#14B8A6",
-];
 
 const INITIAL_BUDGETS = [
   { category: "Housing",        budgeted: 1000, color: "#3B82F6" },
@@ -42,14 +37,9 @@ const COMMON_CATEGORIES = [
   "Entertainment", "Health", "Shopping", "Other",
 ];
 
-/**
- * ── VISUAL TIERING FOR BUDGET HEALTH ──────────────────────────────────────────
- */
 function getBudgetTier(spent: number, budgeted: number) {
   if (budgeted === 0) return { barColor: "var(--fortress-steel)", labelColor: "var(--fortress-steel)", label: "—" };
-  
   const pct = (spent / budgeted) * 100;
-  
   if (spent > budgeted) return { barColor: "var(--castle-red)", labelColor: "var(--castle-red)", label: "OVER BUDGET" };
   if (pct >= 100) return { barColor: "#991B1B", labelColor: "#991B1B", label: "BREACH" };
   if (pct >= 85) return { barColor: "var(--safety-amber)", labelColor: "var(--safety-amber)", label: "CAUTION" };
@@ -57,18 +47,17 @@ function getBudgetTier(spent: number, budgeted: number) {
 }
 
 export function BudgetManager({ budgets, onUpdateBudgets, transactions }: BudgetManagerProps) {
-  const [dialogOpen, setDialogOpen]     = useState(false);
-  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
-  const [category, setCategory]         = useState("");
-  const [budgetAmount, setBudgetAmount] = useState("");
-  const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
+  const [dialogOpen, setDialogOpen]         = useState(false);
+  const [editingBudget, setEditingBudget]   = useState<Budget | null>(null);
+  const [category, setCategory]             = useState("");
+  const [budgetAmount, setBudgetAmount]     = useState("");
+  const [selectedColor, setSelectedColor]   = useState("#3B82F6");
 
-  // Handle initialization of default budgets with the current User ID
   useEffect(() => {
     if (budgets.length === 0 && auth.currentUser) {
       const initialBudgets: Budget[] = INITIAL_BUDGETS.map((b, i) => ({
         id: `budget_initial_${i}_${auth.currentUser?.uid}`,
-        userId: auth.currentUser?.uid, // Link defaults to user
+        userId: auth.currentUser?.uid,
         category: b.category,
         budgeted: b.budgeted,
         spent: 0,
@@ -84,8 +73,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
     setEditingBudget(null);
     setCategory("");
     setBudgetAmount("");
-    const used = budgets.map(b => b.color);
-    setSelectedColor(DEFAULT_COLORS.find(c => !used.includes(c)) || DEFAULT_COLORS[0]);
+    setSelectedColor("#3B82F6");
     setDialogOpen(true);
   };
 
@@ -106,12 +94,6 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
     const currentUserId = auth.currentUser?.uid;
     if (!currentUserId) {
       alert("Session error: Please log in again to save budgets.");
-      return;
-    }
-
-    const colorInUse = budgets.find(b => b.color === selectedColor && b.id !== editingBudget?.id);
-    if (colorInUse) {
-      alert(`This color is already used by "${colorInUse.category}". Please choose another.`);
       return;
     }
 
@@ -207,18 +189,15 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
 
               <div className="space-y-4">
                 {budgets.map((budget) => {
-                  const pct  = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
-                  const tier = getBudgetTier(budget.spent, budget.budgeted);
+                  const pct    = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
+                  const tier   = getBudgetTier(budget.spent, budget.budgeted);
                   const isOver = budget.spent > budget.budgeted;
 
                   return (
                     <div
                       key={budget.id}
                       className="rounded-md p-3.5 border transition-all"
-                      style={{
-                        backgroundColor: "var(--surface)",
-                        borderColor: "var(--border-subtle)",
-                      }}
+                      style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
                     >
                       <div className="flex items-center justify-between mb-2.5">
                         <div className="flex items-center gap-2.5">
@@ -227,19 +206,17 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                             {budget.category}
                           </span>
                         </div>
-                        
+
                         <div className="flex items-center gap-3">
                           <span className="text-xs font-bold font-mono" style={{ color: "var(--fortress-steel)" }}>
                             ${Number(budget.spent).toFixed(0)} / ${budget.budgeted}
                           </span>
-                          
-                          <span 
+                          <span
                             className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
                             style={{ color: tier.labelColor, backgroundColor: "var(--surface-raised)" }}
                           >
                             {tier.label}
                           </span>
-                          
                           <div className="flex items-center gap-0.5 ml-1">
                             <button
                               onClick={() => openEditDialog(budget)}
@@ -265,10 +242,7 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                       >
                         <div
                           className="h-full rounded-full transition-all duration-700"
-                          style={{
-                            width: `${Math.min(pct, 100)}%`,
-                            backgroundColor: tier.barColor,
-                          }}
+                          style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: tier.barColor }}
                         />
                       </div>
 
@@ -325,7 +299,10 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                 Budget Amount
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold font-mono pointer-events-none" style={{ color: "var(--fortress-steel)" }}>
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold font-mono pointer-events-none"
+                  style={{ color: "var(--fortress-steel)" }}
+                >
                   $
                 </span>
                 <Input
@@ -348,26 +325,12 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
               <Label className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--fortress-steel)" }}>
                 Category Color
               </Label>
-              <div className="flex gap-2 flex-wrap">
-                {DEFAULT_COLORS.filter(color => {
-                  const isCurrent = editingBudget?.color === color;
-                  const inUse     = budgets.some(b => b.color === color);
-                  return isCurrent || !inUse;
-                }).map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className="h-8 w-8 rounded-md transition-all"
-                    style={{
-                      backgroundColor: color,
-                      outline: selectedColor === color ? `3px solid var(--engine-navy)` : "none",
-                      outlineOffset: "2px",
-                    }}
-                    onClick={() => setSelectedColor(color)}
-                    title={color}
-                  />
-                ))}
-              </div>
+              <input
+                type="color"
+                className="w-full h-8 rounded cursor-pointer"
+                value={selectedColor}
+                onChange={(e) => setSelectedColor(e.target.value)}
+              />
             </div>
           </div>
 
