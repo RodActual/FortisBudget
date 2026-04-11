@@ -23,9 +23,9 @@ interface DashboardOverviewProps {
   budgets: Budget[];
   transactions: Transaction[];
   savingsBuckets?: SavingsVault[];
-  pendingApprovals?: RecurringRule[]; // NEW
-  onAcceptRecurring?: (rule: RecurringRule) => void; // NEW
-  onSkipRecurring?: (rule: RecurringRule) => void; // NEW
+  pendingApprovals?: RecurringRule[];
+  onAcceptRecurring?: (rule: RecurringRule) => void;
+  onSkipRecurring?: (rule: RecurringRule) => void;
   onOpenAddTransaction: () => void;
 }
 
@@ -36,21 +36,21 @@ function getVaultProgressColor(pct: number): string {
 }
 
 function getBudgetTier(spent: number, budgeted: number) {
-  if (budgeted === 0) return { className: "",             barColor: "var(--fortress-steel)", labelColor: "var(--fortress-steel)", label: "—" };
+  if (budgeted === 0) return { className: "",             barColor: "#475569", labelColor: "#475569", label: "—" };
   const pct = (spent / budgeted) * 100;
-  if (pct > 100)  return { className: "budget-combat",   barColor: "#000000",                labelColor: "#FCA5A5",              label: "OVER BUDGET" };
-  if (pct >= 80)  return { className: "budget-breach",   barColor: "var(--castle-red)",      labelColor: "var(--castle-red)",    label: "CRITICAL" };
-  if (pct >= 60)  return { className: "budget-caution",  barColor: "var(--safety-amber)",    labelColor: "var(--safety-amber)",  label: "CAUTION" };
-  return               { className: "budget-secure",    barColor: "var(--field-green)",     labelColor: "var(--field-green)",   label: "SECURE" };
+  if (pct > 100)  return { className: "budget-combat",  barColor: "#000000", labelColor: "#FCA5A5", label: "OVER BUDGET" };
+  if (pct >= 80)  return { className: "budget-breach",  barColor: "#8B1219", labelColor: "#8B1219", label: "CRITICAL" };
+  if (pct >= 60)  return { className: "budget-caution", barColor: "#D97706", labelColor: "#D97706", label: "CAUTION" };
+  return               { className: "budget-secure",   barColor: "#166534", labelColor: "#166534", label: "SECURE" };
 }
 
 export function DashboardOverview({
   budgets,
   transactions,
   savingsBuckets = [],
-  pendingApprovals = [], // NEW
-  onAcceptRecurring,     // NEW
-  onSkipRecurring,       // NEW
+  pendingApprovals = [],
+  onAcceptRecurring,
+  onSkipRecurring,
   onOpenAddTransaction,
 }: DashboardOverviewProps) {
   const { userName, shieldAllocationPct } = useUserSettings();
@@ -122,7 +122,7 @@ export function DashboardOverview({
         </Button>
       </div>
 
-      {/* ─── NEW: PENDING APPROVALS BANNER ─── */}
+      {/* ─── PENDING APPROVALS BANNER ─── */}
       {pendingApprovals.length > 0 && (
         <Card className="border-2 animate-in slide-in-from-top-4" style={{ borderColor: 'var(--safety-amber)', backgroundColor: '#FFFBEB' }}>
           <CardHeader className="pb-2 flex flex-row items-center gap-2">
@@ -173,7 +173,6 @@ export function DashboardOverview({
 
       {/* ─── ROW 2: STRATEGIC SUMMARY CARDS ─── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-
         {/* Card 1: Net Balance */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -192,7 +191,7 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Card 2: Shield Target (reference metric only) */}
+        {/* Card 2: Shield Target */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)', backgroundColor: 'var(--surface-raised)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--engine-navy)' }}>
@@ -228,7 +227,7 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* Card 4: Available Budget — vault-corrected */}
+        {/* Card 4: Available Budget */}
         <Card className="border" style={{ borderColor: 'var(--border-subtle)' }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--field-green)' }}>
@@ -335,7 +334,8 @@ export function DashboardOverview({
             ) : (
               <div className="space-y-4">
                 {budgets.map((budget) => {
-                  const pct      = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
+                  const rawPct   = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
+                  const pct      = isNaN(rawPct) ? 0 : rawPct;
                   const tier     = getBudgetTier(budget.spent, budget.budgeted);
                   const isCombat = budget.spent > budget.budgeted;
 
@@ -370,12 +370,24 @@ export function DashboardOverview({
                           </span>
                         </div>
                       </div>
-                      <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: isCombat ? 'rgba(255,255,255,0.12)' : 'var(--border-subtle)' }}>
-                        <div
-                          className="h-full transition-all duration-700"
-                          style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: tier.barColor }}
-                        />
+
+                      {/* NEW PROGRESS BAR REPLACEMENT */}
+                      <div style={{ 
+                        width: "100%", 
+                        height: "6px", 
+                        borderRadius: "9999px", 
+                        overflow: "hidden",
+                        backgroundColor: isCombat ? "rgba(255,255,255,0.12)" : "#E2E8F0"
+                      }}>
+                        <div style={{ 
+                          width: `${Math.min(pct, 100)}%`, 
+                          height: "6px",
+                          borderRadius: "9999px",
+                          backgroundColor: tier.barColor,
+                          transition: "width 700ms"
+                        }} />
                       </div>
+
                       {isCombat && (
                         <p className="text-[11px] font-bold mt-2 font-mono" style={{ color: '#FCA5A5' }}>
                           ▲ ${(budget.spent - budget.budgeted).toFixed(2)} Over Budget
@@ -410,7 +422,7 @@ export function DashboardOverview({
                     <div className="flex items-center gap-3.5">
                       <div className="p-2 rounded-md" style={{ backgroundColor: t.type === "income" ? "#DCFCE7" : "#FEE2E2" }}>
                         {t.type === "income"
-                          ? <TrendingUp  className="h-4 w-4" style={{ color: 'var(--field-green)' }} />
+                          ? <TrendingUp   className="h-4 w-4" style={{ color: 'var(--field-green)' }} />
                           : <TrendingDown className="h-4 w-4" style={{ color: 'var(--castle-red)' }} />
                         }
                       </div>

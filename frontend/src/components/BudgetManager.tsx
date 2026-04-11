@@ -22,14 +22,14 @@ interface BudgetManagerProps {
 }
 
 const INITIAL_BUDGETS = [
-  { category: "Housing",        budgeted: 1000, color: "#3B82F6" },
-  { category: "Food",           budgeted: 400,  color: "#10B981" },
+  { category: "Housing",         budgeted: 1000, color: "#3B82F6" },
+  { category: "Food",            budgeted: 400,  color: "#10B981" },
   { category: "Transportation", budgeted: 300,  color: "#F59E0B" },
   { category: "Utilities",      budgeted: 200,  color: "#8B5CF6" },
-  { category: "Entertainment",  budgeted: 150,  color: "#EC4899" },
-  { category: "Health",         budgeted: 200,  color: "#06B6D4" },
-  { category: "Shopping",       budgeted: 250,  color: "#F97316" },
-  { category: "Other",          budgeted: 100,  color: "#6366F1" },
+  { category: "Entertainment",   budgeted: 150,  color: "#EC4899" },
+  { category: "Health",          budgeted: 200,  color: "#06B6D4" },
+  { category: "Shopping",        budgeted: 250,  color: "#F97316" },
+  { category: "Other",           budgeted: 100,  color: "#6366F1" },
 ];
 
 const COMMON_CATEGORIES = [
@@ -38,12 +38,12 @@ const COMMON_CATEGORIES = [
 ];
 
 function getBudgetTier(spent: number, budgeted: number) {
-  if (budgeted === 0) return { barColor: "var(--fortress-steel)", labelColor: "var(--fortress-steel)", label: "—" };
+  if (budgeted === 0) return { barColor: "#475569", labelColor: "#475569", label: "—" };
   const pct = (spent / budgeted) * 100;
-  if (pct > 100)  return { barColor: "#000000",                  labelColor: "var(--castle-red)",    label: "OVER BUDGET" };
-  if (pct >= 80)  return { barColor: "var(--castle-red)",        labelColor: "var(--castle-red)",    label: "CRITICAL" };
-  if (pct >= 60)  return { barColor: "var(--safety-amber)",      labelColor: "var(--safety-amber)",  label: "CAUTION" };
-  return                 { barColor: "var(--field-green)",        labelColor: "var(--field-green)",   label: "SECURE" };
+  if (pct > 100)  return { barColor: "#000000", labelColor: "#8B1219", label: "OVER BUDGET" };
+  if (pct >= 80)  return { barColor: "#8B1219", labelColor: "#8B1219", label: "CRITICAL" };
+  if (pct >= 60)  return { barColor: "#D97706", labelColor: "#D97706", label: "CAUTION" };
+  return               { barColor: "#166534", labelColor: "#166534", label: "SECURE" };
 }
 
 export function BudgetManager({ budgets, onUpdateBudgets, transactions }: BudgetManagerProps) {
@@ -52,6 +52,9 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
   const [category, setCategory]             = useState("");
   const [budgetAmount, setBudgetAmount]     = useState("");
   const [selectedColor, setSelectedColor]   = useState("#3B82F6");
+
+  // Determine if combat mode is active (adjust this logic based on your global state if needed)
+  const isCombat = false; 
 
   useEffect(() => {
     if (budgets.length === 0 && auth.currentUser) {
@@ -189,8 +192,9 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
 
               <div className="space-y-4">
                 {budgets.map((budget) => {
-                  const pct    = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
-                  const tier   = getBudgetTier(budget.spent, budget.budgeted);
+                  const rawPct = budget.budgeted > 0 ? (budget.spent / budget.budgeted) * 100 : 0;
+                  const pct = isNaN(rawPct) ? 0 : rawPct;
+                  const tier = getBudgetTier(budget.spent, budget.budgeted);
                   const isOver = budget.spent > budget.budgeted;
 
                   return (
@@ -236,14 +240,21 @@ export function BudgetManager({ budgets, onUpdateBudgets, transactions }: Budget
                         </div>
                       </div>
 
-                      <div
-                        className="w-full h-1.5 rounded-full overflow-hidden"
-                        style={{ backgroundColor: "var(--border-subtle)" }}
-                      >
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: tier.barColor }}
-                        />
+                      {/* Replacement Progress Bar Code */}
+                      <div style={{ 
+                        width: "100%", 
+                        height: "6px", 
+                        borderRadius: "9999px", 
+                        overflow: "hidden",
+                        backgroundColor: isCombat ? "rgba(255,255,255,0.12)" : "#E2E8F0"
+                      }}>
+                        <div style={{ 
+                          width: `${Math.min(pct, 100)}%`, 
+                          height: "6px",
+                          borderRadius: "9999px",
+                          backgroundColor: tier.barColor,
+                          transition: "width 700ms"
+                        }} />
                       </div>
 
                       {isOver && (

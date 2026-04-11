@@ -217,8 +217,8 @@ export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: Chart
           </CardHeader>
           <CardContent>
             {pieChartData.length > 0 ? (
-              <div style={{ width: "100%", height: 340 }}>
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <div style={{ width: "100%", height: 340, minWidth: 0 }}>
+  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={pieChartData}
@@ -260,8 +260,8 @@ export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: Chart
           </CardHeader>
           <CardContent>
             {categoryData.length > 0 ? (
-              <div style={{ width: "100%", height: 340 }}>
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <div style={{ width: "100%", height: 340, minWidth: 0 }}>
+  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart
                     data={categoryData}
                     layout="vertical"
@@ -331,7 +331,7 @@ export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: Chart
       </div>
 
       {/* ── Financial Trends ────────────────────────────────────────────────── */}
-      <Card className="border" style={{ borderColor: "var(--border-subtle)" }}>
+      <Card className="min-w-0 border" style={{ borderColor: "var(--border-subtle)" }}>
         <CardHeader>
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
@@ -393,8 +393,8 @@ export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: Chart
 
         <CardContent>
           {filteredTrendData.length > 0 ? (
-            <div style={{ width: "100%", height: 380, marginTop: "0.5rem" }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <div style={{ width: "100%", height: 380, marginTop: "0.5rem", minWidth: 0 }}>
+  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <AreaChart
                   data={filteredTrendData}
                   margin={{ top: 20, right: 64, left: 8, bottom: 0 }}
