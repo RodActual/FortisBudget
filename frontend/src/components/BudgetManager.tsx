@@ -40,10 +40,10 @@ const COMMON_CATEGORIES = [
 function getBudgetTier(spent: number, budgeted: number) {
   if (budgeted === 0) return { barColor: "var(--fortress-steel)", labelColor: "var(--fortress-steel)", label: "—" };
   const pct = (spent / budgeted) * 100;
-  if (spent > budgeted) return { barColor: "var(--castle-red)", labelColor: "var(--castle-red)", label: "OVER BUDGET" };
-  if (pct >= 100) return { barColor: "#991B1B", labelColor: "#991B1B", label: "BREACH" };
-  if (pct >= 85) return { barColor: "var(--safety-amber)", labelColor: "var(--safety-amber)", label: "CAUTION" };
-  return { barColor: "var(--field-green)", labelColor: "var(--field-green)", label: "SECURE" };
+  if (pct > 100)  return { barColor: "#000000",                  labelColor: "var(--castle-red)",    label: "OVER BUDGET" };
+  if (pct >= 80)  return { barColor: "var(--castle-red)",        labelColor: "var(--castle-red)",    label: "CRITICAL" };
+  if (pct >= 60)  return { barColor: "var(--safety-amber)",      labelColor: "var(--safety-amber)",  label: "CAUTION" };
+  return                 { barColor: "var(--field-green)",        labelColor: "var(--field-green)",   label: "SECURE" };
 }
 
 export function BudgetManager({ budgets, onUpdateBudgets, transactions }: BudgetManagerProps) {

@@ -35,53 +35,13 @@ function getVaultProgressColor(pct: number): string {
   return "var(--castle-red)";
 }
 
-function getBudgetTier(spent: number, budgeted: number): {
-  className: string;
-  barColor: string;
-  labelColor: string;
-  label: string;
-} {
-  if (budgeted === 0) {
-    return {
-      className: "",
-      barColor: "var(--fortress-steel)",
-      labelColor: "var(--fortress-steel)",
-      label: "—",
-    };
-  }
-
+function getBudgetTier(spent: number, budgeted: number) {
+  if (budgeted === 0) return { className: "",             barColor: "var(--fortress-steel)", labelColor: "var(--fortress-steel)", label: "—" };
   const pct = (spent / budgeted) * 100;
-
-  if (spent > budgeted) {
-    return {
-      className: "budget-combat",
-      barColor: "var(--castle-red)",
-      labelColor: "#FCA5A5",
-      label: "OVER BUDGET",
-    };
-  }
-  if (pct >= 100) {
-    return {
-      className: "budget-breach",
-      barColor: "#991B1B",
-      labelColor: "#991B1B",
-      label: "BREACH",
-    };
-  }
-  if (pct >= 85) {
-    return {
-      className: "budget-caution",
-      barColor: "var(--safety-amber)",
-      labelColor: "var(--safety-amber)",
-      label: "CAUTION",
-    };
-  }
-  return {
-    className: "budget-secure",
-    barColor: "var(--field-green)",
-    labelColor: "var(--field-green)",
-    label: "SECURE",
-  };
+  if (pct > 100)  return { className: "budget-combat",   barColor: "#000000",                labelColor: "#FCA5A5",              label: "OVER BUDGET" };
+  if (pct >= 80)  return { className: "budget-breach",   barColor: "var(--castle-red)",      labelColor: "var(--castle-red)",    label: "CRITICAL" };
+  if (pct >= 60)  return { className: "budget-caution",  barColor: "var(--safety-amber)",    labelColor: "var(--safety-amber)",  label: "CAUTION" };
+  return               { className: "budget-secure",    barColor: "var(--field-green)",     labelColor: "var(--field-green)",   label: "SECURE" };
 }
 
 export function DashboardOverview({
