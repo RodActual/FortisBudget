@@ -70,22 +70,27 @@ exports.checkBudgetThresholds = onDocumentCreated("transactions/{transactionId}"
     const budget = budgetsSnapshot.docs[0].data();
 
     // 3. Calculate Thresholds
-    const totalSpent = budget.spent; 
-    const limit = budget.budgeted;
-    const usageRatio = totalSpent / limit;
+    const newTransactionAmount = Number(transaction.amount);
+    const databaseSpent = Number(budget.spent);
+    
+    const trueTotalSpent = databaseSpent + newTransactionAmount;
+    const limit = Number(budget.budgeted);
+    const usageRatio = trueTotalSpent / limit;
 
-    console.log(`[4] Budget Data Loaded -> Limit: $${limit}, Spent: $${totalSpent}, Ratio: ${usageRatio}`);
+    console.log(`[4] Budget Math -> Limit: $${limit}, Old Spent: $${databaseSpent}, New Tx: $${newTransactionAmount}`);
+    console.log(`[4b] TRUE Total: $${trueTotalSpent}, Ratio: ${usageRatio}`);
 
     let alertMessage = "";
     let alertSubject = "";
 
+    // IMPORTANT: Make sure we check 1.0 (Exceeded) BEFORE 0.8 (Warning)
     if (usageRatio >= 1.0 && settings.budgetExceededEnabled) {
-      alertSubject = "🚨 Fortis Budget Alert -- Cloud";
-      alertMessage = `You exceeded your ${budget.category} budget! Limit: $${limit}. Spent: $${totalSpent}.`;
+      alertSubject = "🚨 Fortis Budget Alert";
+      alertMessage = `You reached or exceeded your ${budget.category} budget! Limit: $${limit}. Current Total: $${trueTotalSpent}.`;
       console.log("[5] Preparing RED Alert");
     } else if (usageRatio >= 0.8 && settings.budgetWarningEnabled) {
-      alertSubject = "⚠️ Fortis Budget Alert-- Cloud";
-      alertMessage = `Warning: You reached ${Math.round(usageRatio * 100)}% of your ${budget.category} budget. Only $${limit - totalSpent} remaining.`;
+      alertSubject = "⚠️ Fortis Budget Warning";
+      alertMessage = `Warning: You reached ${Math.round(usageRatio * 100)}% of your ${budget.category} budget. Only $${limit - trueTotalSpent} remaining.`;
       console.log("[5] Preparing AMBER Alert");
     } else {
       console.log("[EXIT] Usage ratio is below 80%. No alert needed.");
