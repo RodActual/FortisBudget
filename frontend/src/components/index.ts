@@ -16,3 +16,4 @@ export { EmailVerification } from "./EmailVerification";
 export { ErrorBoundary } from './ErrorBoundary';
 export { GlobalErrorBoundary } from './GlobalErrorBoundary';
 export { CSVMappingDialog } from "./CSVMappingDialog";
+export { VerifyEmail } from "./VerifyEmail";

@@ -21,7 +21,8 @@ import {
   WelcomeSetup, 
   EmailVerification,
   ErrorBoundary,
-  GlobalErrorBoundary
+  GlobalErrorBoundary,
+  VerifyEmail
 } from "./components";
 
 import { FortisLogo } from "./components/FortisLogo";
@@ -87,6 +88,16 @@ export default function App() {
     weeklyReportEnabled: false,
     dismissedAlertIds: [],
   });
+
+const [isVerifyingRoute, setIsVerifyingRoute] = useState(false);
+
+  // Check URL on initial load for Firebase verification parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "verifyEmail") {
+      setIsVerifyingRoute(true);
+    }
+  }, []);
 
   // --- 2. UI STATE ---
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -253,6 +264,23 @@ export default function App() {
   // Global Legal Overlays
   if (authMode === 'privacy') return <PrivacyPolicy onBack={handleLegalBack} />;
   if (authMode === 'terms') return <TermsOfService onBack={handleLegalBack} />;
+
+  // NEW: Catch the verification link
+  if (isVerifyingRoute) {
+    return (
+      <VerifyEmail 
+        onComplete={() => {
+          setIsVerifyingRoute(false);
+          // Clean the ugly URL parameters out of the browser address bar
+          window.history.replaceState({}, document.title, window.location.pathname);
+          // If they are logged in, reload to refresh their Firebase Auth token
+          if (auth.currentUser) {
+            window.location.reload();
+          }
+        }} 
+      />
+    );
+  }
 
   if (!user) {
     if (authMode === 'login' || authMode === 'signup') {
