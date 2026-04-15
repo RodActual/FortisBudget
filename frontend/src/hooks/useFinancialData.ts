@@ -27,7 +27,7 @@ export function useFinancialData(user: any) {
       return;
     }
 
-    const qTransactions = query(collection(db, "transactions"), where("userId", "==", user.uid), orderBy("date", "desc"), limit(100));
+    const qTransactions = query(collection(db, "transactions"), where("userId", "==", user.uid), orderBy("date", "desc"), limit(10000));
     const qBudgets = query(collection(db, "budgets"), where("userId", "==", user.uid));
     const qVaults = query(collection(db, "savingsBuckets"), where("userId", "==", user.uid));
     const qRules = query(collection(db, "recurringRules"), where("userId", "==", user.uid)); // NEW

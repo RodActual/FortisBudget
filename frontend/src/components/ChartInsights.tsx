@@ -56,35 +56,36 @@ export function ChartsInsights({ budgets, transactions, onUpdateBudgets }: Chart
     const grouped: Record<string, { date: string; sortKey: number; income: number; expense: number }> = {};
 
     transactions.forEach((t) => {
-      if (t.archived) return; 
 
-      const d = new Date(t.date);
-      if (isNaN(d.getTime())) return;
-      
-      const year = d.getFullYear();
-      const month = d.getMonth(); 
-      
-      // Ensure key sorts properly chronologically
-      const paddedMonth = month.toString().padStart(2, "0");
-      const key = `${year}-${paddedMonth}`;
-      
-      const displayDate = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  const d = new Date(t.date);
+  if (isNaN(d.getTime())) return;
 
-      if (!grouped[key]) {
-        grouped[key] = { 
-          date: displayDate, 
-          sortKey: year * 100 + month, 
-          income: 0, 
-          expense: 0 
-        };
-      }
-      
-      if (t.type === "income") {
-        grouped[key].income += Number(t.amount || 0);
-      } else {
-        grouped[key].expense += Number(t.amount || 0);
-      }
-    });
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1; // ← fix: 1-indexed so key is true YYYY-MM
+
+  const key = `${year}-${month.toString().padStart(2, "0")}`;
+
+  // Derive display label from a stable date, not the raw transaction date
+  const displayDate = new Date(year, month - 1, 1).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+
+  if (!grouped[key]) {
+    grouped[key] = {
+      date: displayDate,
+      sortKey: year * 100 + month, // now Dec=202412, Jan=202501 ✓
+      income: 0,
+      expense: 0,
+    };
+  }
+
+  if (t.type === "income") {
+    grouped[key].income += Number(t.amount || 0);
+  } else {
+    grouped[key].expense += Number(t.amount || 0);
+  }
+});
 
     const sorted = Object.values(grouped).sort((a, b) => a.sortKey - b.sortKey);
     
