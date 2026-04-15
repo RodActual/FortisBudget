@@ -28,7 +28,7 @@ export const getSuggestedCategory = (description: string): string => {
   if (/kroger|meijer|walmart|aldi|costco|publix|wholefoods|food|grocery/.test(desc)) return "Food";
   if (/shell|exxon|sheets|bp|speedway|uber|lyft|tesla|transport/.test(desc)) return "Transportation";
   if (/electric|water|gas|waste|comcast|spectrum|verizon|att/.test(desc)) return "Utilities";
-  if (/netflix|spotify|hulu|apple|disney|hbo|gaming|minecraft|steam/.test(desc)) return "Entertainment";
+  if (/netflix|cinemarl|spotify|hulu|apple|disney|hbo|gaming|minecraft|steam/.test(desc)) return "Entertainment";
   if (/cvs|walgreens|doctor|hospital|pharmacy|insurance|health/.test(desc)) return "Health";
   if (/amazon|target|best buy|nike|tj maxx|shopping/.test(desc)) return "Shopping";
   
