@@ -1,6 +1,10 @@
 import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
-import { Plus, Edit2, Trash2, Search, Download, Upload, CalendarClock, Repeat, ListOrdered, ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  Plus, Edit2, Trash2, Search, Download, Upload, 
+  CalendarClock, Repeat, ListOrdered, ChevronLeft, 
+  ChevronRight, X, FolderInput 
+} from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -10,6 +14,13 @@ import { getTodayStart, getStartOfDay, getDaysAgo, isDateBefore, parseDateInput,
 import { useCSV } from "../hooks/Usecsv";
 import { CSVMappingDialog } from "./CSVMappingDialog";
 import { MoneyInput } from "./MoneyInput";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 interface ExpenseTrackingProps {
   transactions: Transaction[];
@@ -54,6 +65,7 @@ export function ExpenseTracking({
   const [dateRange, setDateRange]     = useState<DateRangeKey>("90d");
   const [pageSize, setPageSize]       = useState<PageSize>(50);
   const [page, setPage]               = useState(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [showRecurringForm, setShowRecurringForm] = useState(false);
   const [recurringForm, setRecurringForm] = useState({
@@ -64,6 +76,25 @@ export function ExpenseTracking({
     frequency: "monthly" as "weekly" | "monthly" | "yearly",
     nextDueDate: formatDateForInput(new Date()),
   });
+
+  const toggleSelectAll = () => {
+  if (selectedIds.length === visibleTransactions.length) {
+    setSelectedIds([]);
+  } else {
+    setSelectedIds(visibleTransactions.map(t => t.id));
+  }
+};
+
+const handleBulkDelete = async () => {
+  if (!window.confirm(`Delete ${selectedIds.length} transactions?`)) return;
+  await Promise.all(selectedIds.map(id => onDelete(id)));
+  setSelectedIds([]);
+};
+
+const handleBulkCategoryChange = async (newCategory: string) => {
+  await Promise.all(selectedIds.map(id => onUpdateTransaction(id, { category: newCategory })));
+  setSelectedIds([]);
+};
 
   const {
     handleExport, handleImportClick, handleFileChange, fileInputRef,
@@ -145,6 +176,14 @@ export function ExpenseTracking({
     }
   };
 
+  const toggleSelectOne = (id: string) => {
+  setSelectedIds(prev => 
+    prev.includes(id) 
+      ? prev.filter(i => i !== id) 
+      : [...prev, id]
+  );
+};
+
   const handleAddRecurring = async () => {
     if (!onAddRecurringRule) return;
     if (!recurringForm.description || recurringForm.amount <= 0 || !recurringForm.category) {
@@ -188,6 +227,7 @@ export function ExpenseTracking({
         budgets={budgets}
         onGeneratePreview={generatePreview}
         onFinalImport={executeFinalImport}
+        onAddRecurringRule={onAddRecurringRule|| (async () => {})}
       />
       <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleFileChange} />
 
@@ -246,6 +286,26 @@ export function ExpenseTracking({
         </div>
       </div>
 
+{selectedIds.length > 0 && !showRecurringPanel && (
+  <div className="sticky top-4 z-30 flex items-center justify-between px-4 py-3 rounded-lg border shadow-xl bg-white mb-4" style={{ borderColor: "var(--engine-navy)" }}>
+    <div className="flex items-center gap-4">
+      <Button variant="ghost" size="icon" onClick={() => setSelectedIds([])}><X className="h-4 w-4" /></Button>
+      <span className="text-sm font-bold uppercase tracking-widest">{selectedIds.length} Selected</span>
+    </div>
+    <div className="flex items-center gap-3">
+      <Select onValueChange={handleBulkCategoryChange}>
+        <SelectTrigger className="w-[180px] h-9 text-xs"><SelectValue placeholder="Move to Category" /></SelectTrigger>
+        <SelectContent style={{ backgroundColor: "var(--surface)" }}>
+          {budgets.map(b => <SelectItem key={b.id} value={b.category}>{b.category}</SelectItem>)}
+          <SelectItem value="Income">Income</SelectItem>
+        </SelectContent>
+      </Select>
+      <Button size="sm" onClick={handleBulkDelete} className="bg-red-600 text-white font-bold h-9">
+        <Trash2 className="w-4 h-4 mr-2" /> Delete
+      </Button>
+    </div>
+  </div>
+)}
       {/* ── CONDITIONAL RENDERING ──────────────────────────────────────── */}
       {showRecurringPanel ? (
 
@@ -454,84 +514,115 @@ export function ExpenseTracking({
           </div>
 
           {/* ── Table ────────────────────────────────────────────────────── */}
-          <div className="rounded-md border overflow-hidden" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface)" }}>
-            <Table>
-              <TableHeader>
-                <TableRow style={{ backgroundColor: "var(--surface-raised)" }}>
-                  {["Date", "Description", "Category", "Amount", "Actions"].map((col, i) => (
-                    <TableHead key={col}
-                      className={`text-[10px] font-bold uppercase tracking-widest ${i >= 3 ? "text-right" : ""}`}
-                      style={{ color: "var(--fortress-steel)" }}
-                    >{col}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleTransactions.length > 0 ? (
-                  visibleTransactions.map(t => (
-                    <TableRow key={t.id} className="transition-colors" style={{ borderColor: "var(--border-subtle)" }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--surface-raised)")}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
-                    >
-                      <TableCell className="text-xs font-mono whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
-                        {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate font-semibold text-sm"
-                        style={{ color: "var(--text-primary)" }} title={t.description}
-                      >
-                        {t.description}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(t.category) }} />
-                          <span className="text-xs font-medium px-2 py-0.5 rounded"
-                            style={{ backgroundColor: "var(--surface-raised)", color: "var(--fortress-steel)", border: "1px solid var(--border-subtle)" }}
-                          >
-                            {t.category}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-bold font-mono text-sm"
-                        style={{ color: t.type === "income" ? "var(--field-green)" : "var(--castle-red)" }}
-                      >
-                        {t.type === "income" ? "+" : "−"}${t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 transition-colors"
-                            style={{ color: "var(--fortress-steel)" }}
-                            onMouseEnter={e => (e.currentTarget.style.color = "var(--engine-navy)")}
-                            onMouseLeave={e => (e.currentTarget.style.color = "var(--fortress-steel)")}
-                            onClick={() => onEdit(t)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 transition-colors"
-                            style={{ color: "var(--fortress-steel)" }}
-                            onMouseEnter={e => (e.currentTarget.style.color = "var(--castle-red)")}
-                            onMouseLeave={e => (e.currentTarget.style.color = "var(--fortress-steel)")}
-                            onClick={() => onDelete(t.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-48 text-center">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <Search className="h-10 w-10 opacity-20" style={{ color: "var(--fortress-steel)" }} />
-                        <p className="font-semibold text-sm" style={{ color: "var(--fortress-steel)" }}>No transactions found</p>
-                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>Try adjusting your date range or search term.</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+<div className="rounded-md border overflow-hidden" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--surface)" }}>
+  <Table>
+    <TableHeader>
+      <TableRow style={{ backgroundColor: "var(--surface-raised)" }}>
+        {/* 1. ADD SELECT ALL CHECKBOX */}
+        <TableHead className="w-10">
+          <input 
+            type="checkbox" 
+            className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer"
+            checked={selectedIds.length === visibleTransactions.length && visibleTransactions.length > 0}
+            onChange={toggleSelectAll}
+          />
+        </TableHead>
+
+        {["Date", "Description", "Category", "Amount", "Actions"].map((col, i) => (
+          <TableHead key={col}
+            className={`text-[10px] font-bold uppercase tracking-widest ${i >= 3 ? "text-right" : ""}`}
+            style={{ color: "var(--fortress-steel)" }}
+          >{col}</TableHead>
+        ))}
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {visibleTransactions.length > 0 ? (
+        visibleTransactions.map(t => (
+          <TableRow 
+            key={t.id} 
+            className="transition-colors" 
+            style={{ 
+              borderColor: "var(--border-subtle)",
+              backgroundColor: selectedIds.includes(t.id) ? "var(--surface-raised)" : "transparent" 
+            }}
+            onMouseEnter={e => {
+              if (!selectedIds.includes(t.id)) e.currentTarget.style.backgroundColor = "var(--surface-raised)";
+            }}
+            onMouseLeave={e => {
+              if (!selectedIds.includes(t.id)) e.currentTarget.style.backgroundColor = "transparent";
+            }}
+          >
+            {/* 2. ADD INDIVIDUAL ROW CHECKBOX */}
+            <TableCell>
+              <input 
+                type="checkbox" 
+                className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer"
+                checked={selectedIds.includes(t.id)}
+                onChange={() => toggleSelectOne(t.id)}
+              />
+            </TableCell>
+
+            <TableCell className="text-xs font-mono whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+              {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+            </TableCell>
+            <TableCell className="max-w-[200px] truncate font-semibold text-sm"
+              style={{ color: "var(--text-primary)" }} title={t.description}
+            >
+              {t.description}
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(t.category) }} />
+                <span className="text-xs font-medium px-2 py-0.5 rounded"
+                  style={{ backgroundColor: "var(--surface-raised)", color: "var(--fortress-steel)", border: "1px solid var(--border-subtle)" }}
+                >
+                  {t.category}
+                </span>
+              </div>
+            </TableCell>
+            <TableCell className="text-right font-bold font-mono text-sm"
+              style={{ color: t.type === "income" ? "var(--field-green)" : "var(--castle-red)" }}
+            >
+              {t.type === "income" ? "+" : "−"}${t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex justify-end gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8 transition-colors"
+                  style={{ color: "var(--fortress-steel)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--engine-navy)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--fortress-steel)")}
+                  onClick={() => onEdit(t)}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 transition-colors"
+                  style={{ color: "var(--fortress-steel)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--castle-red)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = "var(--fortress-steel)")}
+                  onClick={() => onDelete(t.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))
+      ) : (
+        <TableRow>
+          {/* 3. ADJUST COLSPAN TO 6 TO ACCOUNT FOR NEW COLUMN */}
+          <TableCell colSpan={6} className="h-48 text-center">
+            <div className="flex flex-col items-center justify-center gap-2">
+              <Search className="h-10 w-10 opacity-20" style={{ color: "var(--fortress-steel)" }} />
+              <p className="font-semibold text-sm" style={{ color: "var(--fortress-steel)" }}>No transactions found</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>Try adjusting your date range or search term.</p>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+</div>
 
           {/* ── Pagination Footer ─────────────────────────────────────────── */}
           {totalPages > 1 && (

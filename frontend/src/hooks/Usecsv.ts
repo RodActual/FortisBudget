@@ -96,35 +96,42 @@ function isLikelyRecurring(description: string): boolean {
   const recurringKeywords = [
     "netflix", "spotify", "hulu", "disney+", "amazon prime", "hbo", 
     "rent", "mortgage", "insurance", "gym", "membership", "utility",
-    "internet", "verizon", "at&t", "spectrum", "duke energy"
+    "internet", "verizon", "at&t", "spectrum", "duke energy", "icloud"
   ];
   return recurringKeywords.some(kw => descLower.includes(kw));
 }
 
+/**
+ * NEW: Pattern Matching Logic integrated with existing Budgets.
+ * This ensures the importer "speaks the same language" as your BudgetManager.
+ */
 function autoCategorize(description: string, defaultCategory: string, budgets: Budget[]): string {
   const descLower = description.toLowerCase();
+  
   const rules = [
-    { cat: "Groceries", keywords: ["walmart", "kroger", "target", "meijer", "aldi", "publix", "safeway", "whole foods", "trader joe", "grocery"] },
-    { cat: "Dining", keywords: ["mcdonalds", "starbucks", "wendys", "taco bell", "chick-fil-a", "subway", "doordash", "uber eats", "grubhub", "restaurant", "cafe", "pizza", "burger", "panera", "chipotle"] },
-    { cat: "Gas", keywords: ["shell", "exxon", "chevron", "speedway", "bp", "pilot", "marathon", "sunoco", "gas", "fuel"] },
+    { cat: "Food", keywords: ["walmart", "kroger", "target", "meijer", "aldi", "publix", "safeway", "whole foods", "trader joe", "grocery", "mcdonalds", "starbucks", "wendys", "taco bell", "chick-fil-a", "subway", "doordash", "uber eats", "grubhub", "restaurant", "cafe", "pizza", "burger", "panera", "chipotle"] },
+    { cat: "Transportation", keywords: ["shell", "exxon", "chevron", "speedway", "bp", "pilot", "marathon", "sunoco", "gas", "fuel", "uber", "lyft", "tesla", "transit"] },
     { cat: "Utilities", keywords: ["duke", "aes", "spectrum", "at&t", "verizon", "t-mobile", "electric", "water", "sewer", "internet", "comcast", "xfinity"] },
-    { cat: "Housing", keywords: ["rent", "mortgage", "apartment", "housing"] },
-    { cat: "Insurance", keywords: ["geico", "state farm", "progressive", "allstate", "insurance"] },
-    { cat: "Entertainment", keywords: ["netflix", "spotify", "hulu", "amazon prime", "hbo", "disney", "amc", "steam", "playstation", "xbox"] },
-    { cat: "Shopping", keywords: ["amazon", "amzn", "best buy", "ebay", "etsy", "home depot", "lowes"] },
-    { cat: "Health", keywords: ["pharmacy", "cvs", "walgreens", "rite aid", "hospital", "clinic", "dental"] }
+    { cat: "Housing", keywords: ["rent", "mortgage", "apartment", "housing", "hoa"] },
+    { cat: "Health", keywords: ["pharmacy", "cvs", "walgreens", "rite aid", "hospital", "clinic", "dental", "doctor", "insurance"] },
+    { cat: "Entertainment", keywords: ["netflix", "spotify", "hulu", "amazon prime", "hbo", "disney", "amc", "steam", "playstation", "xbox", "gaming", "minecraft"] },
+    { cat: "Shopping", keywords: ["amazon", "amzn", "best buy", "ebay", "etsy", "home depot", "lowes", "nike", "tj maxx", "shopping", "retail"] }
   ];
 
   for (const rule of rules) {
     if (rule.keywords.some(kw => descLower.includes(kw))) {
+      // Find the budget that matches this category name (case-insensitive)
       const matchedBudget = budgets.find(b => 
-        b.category.toLowerCase() === rule.cat.toLowerCase() || 
-        rule.cat.toLowerCase().includes(b.category.toLowerCase())
+        b.category.toLowerCase() === rule.cat.toLowerCase()
       );
       if (matchedBudget) return matchedBudget.category;
-      return rule.cat; 
+      
+      // Secondary check: if "Groceries" is the rule but the user has "Food"
+      const fuzzyMatch = budgets.find(b => rule.cat.toLowerCase().includes(b.category.toLowerCase()) || b.category.toLowerCase().includes(rule.cat.toLowerCase()));
+      if (fuzzyMatch) return fuzzyMatch.category;
     }
   }
+  
   return defaultCategory;
 }
 
@@ -160,7 +167,6 @@ export function useCSV({ transactions, budgets, onImportTransactions }: UseCSVPr
     setIsMappingModalOpen(true);
   }, []);
 
-  // STEP 1: Parse CSV into a Staged Preview
   const generatePreview = (mapping: CSVMapping): StagedTransaction[] => {
     const rows: StagedTransaction[] = [];
     const dateIdx = csvHeaders.indexOf(mapping.dateCol);
@@ -177,7 +183,6 @@ export function useCSV({ transactions, budgets, onImportTransactions }: UseCSVPr
       const rawIncome = incomeIdx >= 0 ? (cells[incomeIdx] ?? "") : "";
       let isSplitIncome = false;
 
-      // Logic for split columns
       if (incomeIdx >= 0 && rawIncome.trim() !== "") {
         const incParsed = parseFloat(rawIncome.replace(/[$,\s]/g, ""));
         if (!isNaN(incParsed) && incParsed !== 0) {
@@ -190,9 +195,7 @@ export function useCSV({ transactions, budgets, onImportTransactions }: UseCSVPr
       let parsedAmount = parseFloat(cleanAmountStr);
       if (isNaN(parsedAmount)) continue;
 
-      // ─── CRITICAL FIX: APPLY INVERSION ──────────────────────────────────
-      // If the user checked 'invert', we flip the sign before processing type.
-      // We skip inversion if it's a split income column, as those are always income.
+      // Apply sign inversion logic
       if (mapping.invertAmounts && !isSplitIncome) {
         parsedAmount = parsedAmount * -1;
       }
@@ -204,11 +207,9 @@ export function useCSV({ transactions, budgets, onImportTransactions }: UseCSVPr
         const rawTypeLabel = (cells[typeIdx] ?? "").toLowerCase();
         type = (rawTypeLabel.includes("credit") || rawTypeLabel.includes("deposit") || rawTypeLabel.includes("income")) ? "income" : "expense";
       } else {
-        // If no explicit type column, sign determines the type
         type = parsedAmount < 0 ? "expense" : "income";
       }
 
-      // Final amount is always stored as a positive number in the DB
       const finalAmount = Math.abs(parsedAmount);
       if (finalAmount === 0) continue;
 
@@ -218,6 +219,7 @@ export function useCSV({ transactions, budgets, onImportTransactions }: UseCSVPr
       rows.push({
         date,
         description,
+        // Match against user's specific budgets
         category: type === "income" ? "Income" : autoCategorize(description, mapping.defaultCategory, budgets),
         amount: finalAmount,
         type,
@@ -232,7 +234,6 @@ export function useCSV({ transactions, budgets, onImportTransactions }: UseCSVPr
     try {
       await onImportTransactions(data);
       setIsMappingModalOpen(false);
-      alert(`Successfully imported ${data.length} transactions.`);
     } catch (err) {
       console.error("Import error:", err);
       alert("Failed to save transactions.");

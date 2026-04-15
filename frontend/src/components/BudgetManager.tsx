@@ -20,22 +20,34 @@ interface BudgetManagerProps {
   onUpdateBudgets: (budgets: Budget[]) => void;
   transactions: any[];
 }
+export const getSuggestedCategory = (description: string): string => {
+  const desc = description.toLowerCase();
+  
+  // High-frequency merchant matching
+  if (/housing|rent|mortgage|apartment|hoa/.test(desc)) return "Housing";
+  if (/kroger|meijer|walmart|aldi|costco|publix|wholefoods|food|grocery/.test(desc)) return "Food";
+  if (/shell|exxon|bp|speedway|uber|lyft|tesla|transport/.test(desc)) return "Transportation";
+  if (/electric|water|gas|waste|comcast|spectrum|verizon|att/.test(desc)) return "Utilities";
+  if (/netflix|spotify|hulu|apple|disney|hbo|gaming|minecraft|steam/.test(desc)) return "Entertainment";
+  if (/cvs|walgreens|doctor|hospital|pharmacy|insurance|health/.test(desc)) return "Health";
+  if (/amazon|target|best buy|nike|tj maxx|shopping/.test(desc)) return "Shopping";
+  
+  return "Other";
+};
 
 const INITIAL_BUDGETS = [
-  { category: "Housing",         budgeted: 1000, color: "#3B82F6" },
-  { category: "Food",            budgeted: 400,  color: "#10B981" },
-  { category: "Transportation", budgeted: 300,  color: "#F59E0B" },
-  { category: "Utilities",      budgeted: 200,  color: "#8B5CF6" },
-  { category: "Entertainment",   budgeted: 150,  color: "#EC4899" },
-  { category: "Health",          budgeted: 200,  color: "#06B6D4" },
-  { category: "Shopping",        budgeted: 250,  color: "#F97316" },
-  { category: "Other",           budgeted: 100,  color: "#6366F1" },
+  { category: "Housing",        budgeted: 0, color: "#1E293B" },
+  { category: "Groceries",      budgeted: 0, color: "#059669" },
+  { category: "Dining Out",     budgeted: 0, color: "#DC2626" },
+  { category: "Utilities",      budgeted: 0, color: "#D97706" },
+  { category: "Transportation", budgeted: 0, color: "#2563EB" },
+  { category: "Subscriptions",  budgeted: 0, color: "#7C3AED" },
+  { category: "Shopping",       budgeted: 0, color: "#DB2777" },
+  { category: "Health",         budgeted: 0, color: "#0891B2" },
+  { category: "Other",          budgeted: 0, color: "#94A3B8" },
 ];
 
-const COMMON_CATEGORIES = [
-  "Housing", "Food", "Transportation", "Utilities",
-  "Entertainment", "Health", "Shopping", "Other",
-];
+const COMMON_CATEGORIES = INITIAL_BUDGETS.map(b => b.category);
 
 function getBudgetTier(spent: number, budgeted: number) {
   if (budgeted === 0) return { barColor: "#475569", labelColor: "#475569", label: "—" };

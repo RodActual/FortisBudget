@@ -39,7 +39,7 @@ interface CSVMappingDialogProps {
   budgets: Budget[];
   onGeneratePreview: (mapping: CSVMapping) => StagedTransaction[];
   onFinalImport: (data: Omit<Transaction, "id">[]) => Promise<void>;
-  onAddRecurringRule?: (rule: Omit<RecurringRule, "id" | "userId">) => Promise<void>;
+  onAddRecurringRule: (rule: Omit<RecurringRule, "id" | "userId">) => Promise<void>;
   onAddBudget?: (category: string, limit: number, color: string) => Promise<void>;
 }
 
@@ -295,8 +295,8 @@ export function CSVMappingDialog({
                           <Select value={row.category} onValueChange={(val) => handleCategorySelect(idx, val)}>
                             <SelectTrigger 
   className="h-8 text-xs border-none hover:bg-slate-100" 
-  style={{ backgroundColor: "var(--surface-raised)" }}
-></SelectTrigger>
+  style={{ backgroundColor: "var(--surface-raised)" }} 
+><SelectValue /></SelectTrigger>
                             <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
                               <SelectItem value="NEW_CATEGORY" className="font-bold text-blue-600 border-b"><Plus className="w-3 h-3 mr-2 inline" /> New Category</SelectItem>
                               {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
@@ -343,24 +343,62 @@ export function CSVMappingDialog({
         )}
 
         {/* MODAL: RECURRING RULE */}
-        {recurringToCreate && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Card className="w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 flex items-center gap-2"><CalendarDays className="w-4 h-4" /> Setup Rule</h3>
-                <Button variant="ghost" size="icon" onClick={() => setRecurringToCreate(null)}><X className="w-4 h-4" /></Button>
-              </div>
-              <div className="space-y-3">
-                <p className="text-xs text-slate-500">Enable automated prompts for <span className="font-bold text-slate-900">{recurringToCreate.description}</span>?</p>
-                <Select value={frequency} onValueChange={(val: any) => setFrequency(val)}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="yearly">Yearly</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <Button className="w-full font-bold bg-slate-900 text-white" onClick={handleSaveRecurringRule}>Confirm Rule</Button>
-            </Card>
-          </div>
-        )}
+{recurringToCreate && (
+  <div 
+    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    onClick={() => setRecurringToCreate(null)} // Click outside to close
+  >
+    <Card 
+      className="w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95"
+      onClick={(e) => e.stopPropagation()} // Prevents closing when clicking inside the card
+      style={{ backgroundColor: "var(--surface)", borderColor: "var(--border-subtle)" }}
+    >
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-900 flex items-center gap-2">
+          <CalendarDays className="w-4 h-4" /> Setup Rule
+        </h3>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setRecurringToCreate(null)}
+          className="hover:bg-slate-100"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">
+          Enable automated prompts for <span className="font-bold text-slate-900">{recurringToCreate.description}</span>?
+        </p>
+        
+        <div className="grid gap-1.5">
+          <Label className="text-[10px] uppercase font-bold text-slate-400">Frequency</Label>
+          <Select value={frequency} onValueChange={(val: any) => setFrequency(val)}>
+            <SelectTrigger className="h-9 text-xs" style={{ backgroundColor: "var(--surface-raised)" }}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="yearly">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Button 
+        className="w-full font-bold text-white transition-all hover:opacity-90" 
+        style={{ backgroundColor: "var(--engine-navy)" }}
+        onClick={() => {
+          handleSaveRecurringRule();
+        }}
+      >
+        Confirm Rule
+      </Button>
+    </Card>
+  </div>
+)}
 
         {/* FOOTER */}
         <div className="px-6 py-4 border-t shrink-0 flex justify-between items-center" style={{ backgroundColor: "var(--surface)" }}>
