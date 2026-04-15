@@ -26,7 +26,7 @@ export const getSuggestedCategory = (description: string): string => {
   // High-frequency merchant matching
   if (/housing|rent|mortgage|apartment|hoa/.test(desc)) return "Housing";
   if (/kroger|meijer|walmart|aldi|costco|publix|wholefoods|food|grocery/.test(desc)) return "Food";
-  if (/shell|exxon|bp|speedway|uber|lyft|tesla|transport/.test(desc)) return "Transportation";
+  if (/shell|exxon|sheets|bp|speedway|uber|lyft|tesla|transport/.test(desc)) return "Transportation";
   if (/electric|water|gas|waste|comcast|spectrum|verizon|att/.test(desc)) return "Utilities";
   if (/netflix|spotify|hulu|apple|disney|hbo|gaming|minecraft|steam/.test(desc)) return "Entertainment";
   if (/cvs|walgreens|doctor|hospital|pharmacy|insurance|health/.test(desc)) return "Health";
