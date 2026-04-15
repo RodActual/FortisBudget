@@ -189,32 +189,40 @@ export function CSVMappingDialog({
               <div className="grid gap-1.5">
                 <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Date Column *</Label>
                 <Select value={dateCol} onValueChange={setDateCol}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}</SelectContent>
+                  <SelectTrigger style={{ backgroundColor: "var(--surface-raised)" }}>
+  <SelectValue />
+</SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>{headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
               <div className="grid gap-1.5">
                 <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Description / Payee *</Label>
                 <Select value={descCol} onValueChange={setDescCol}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}</SelectContent>
+                  <SelectTrigger style={{ backgroundColor: "var(--surface-raised)" }}>
+  <SelectValue />
+</SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>{headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
               <div className="grid gap-1.5 pt-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
                 <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Primary Amount Column *</Label>
                 <Select value={amountCol} onValueChange={setAmountCol}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}</SelectContent>
+                  <SelectTrigger style={{ backgroundColor: "var(--surface-raised)" }}>
+  <SelectValue />
+</SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>{headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
               <div className="grid gap-1.5">
                 <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Income Column (Optional)</Label>
                 <Select value={incomeCol} onValueChange={setIncomeCol}>
-                  <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectTrigger style={{ backgroundColor: "var(--surface-raised)" }}>
+  <SelectValue placeholder="Optional" />
+</SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
                     <SelectItem value="none">-- None --</SelectItem>
                     {headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}
                   </SelectContent>
@@ -224,8 +232,10 @@ export function CSVMappingDialog({
               <div className="grid gap-1.5">
                 <Label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Type Column (Optional)</Label>
                 <Select value={typeCol} onValueChange={setTypeCol}>
-                  <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectTrigger style={{ backgroundColor: "var(--surface-raised)" }}>
+  <SelectValue placeholder="Optional" />
+</SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
                     <SelectItem value="none">-- None --</SelectItem>
                     {headers.map((h, i) => <SelectItem key={i} value={h}>{h || "Empty"}</SelectItem>)}
                   </SelectContent>
@@ -249,7 +259,7 @@ export function CSVMappingDialog({
                    <span className="text-xs font-bold text-muted-foreground">{selectedIndices.length} Selected</span>
                    <Select value={bulkCategory} onValueChange={setBulkCategory}>
                      <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="Bulk Category" /></SelectTrigger>
-                     <SelectContent>{uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                     <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>{uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
                    </Select>
                    <Button size="sm" variant="outline" className="h-8 text-xs font-bold" disabled={!bulkCategory || selectedIndices.length === 0} onClick={() => {
                      selectedIndices.forEach(idx => updateStagedRow(idx, { category: bulkCategory }));
@@ -283,8 +293,11 @@ export function CSVMappingDialog({
                         <TableCell><Input className="h-8 text-xs bg-transparent border-none" value={row.description} onChange={(e) => updateStagedRow(idx, { description: e.target.value })} /></TableCell>
                         <TableCell>
                           <Select value={row.category} onValueChange={(val) => handleCategorySelect(idx, val)}>
-                            <SelectTrigger className="h-8 text-xs border-none bg-transparent hover:bg-slate-100"><SelectValue /></SelectTrigger>
-                            <SelectContent>
+                            <SelectTrigger 
+  className="h-8 text-xs border-none hover:bg-slate-100" 
+  style={{ backgroundColor: "var(--surface-raised)" }}
+></SelectTrigger>
+                            <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
                               <SelectItem value="NEW_CATEGORY" className="font-bold text-blue-600 border-b"><Plus className="w-3 h-3 mr-2 inline" /> New Category</SelectItem>
                               {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             </SelectContent>
@@ -341,7 +354,7 @@ export function CSVMappingDialog({
                 <p className="text-xs text-slate-500">Enable automated prompts for <span className="font-bold text-slate-900">{recurringToCreate.description}</span>?</p>
                 <Select value={frequency} onValueChange={(val: any) => setFrequency(val)}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="yearly">Yearly</SelectItem></SelectContent>
+                  <SelectContent style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border-subtle)" }}><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem><SelectItem value="yearly">Yearly</SelectItem></SelectContent>
                 </Select>
               </div>
               <Button className="w-full font-bold bg-slate-900 text-white" onClick={handleSaveRecurringRule}>Confirm Rule</Button>
